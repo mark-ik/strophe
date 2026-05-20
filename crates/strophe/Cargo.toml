@@ -1,0 +1,25 @@
+[package]
+name = "strophe"
+version = "0.1.0"
+description = "Strophe: a collaborative loop recorder for distributed bands. The Xilem application."
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+readme = "../../README.md"
+publish = false
+
+[[bin]]
+name = "strophe"
+path = "src/main.rs"
+
+[dependencies]
+strophe-engine = { workspace = true }
+strophe-model = { workspace = true }
+strophe-widgets = { workspace = true }
+xilem = { workspace = true }
+masonry = { workspace = true }
+masonry_winit = { workspace = true }
+winit = { workspace = true }
+tokio = { workspace = true }

@@ -1,0 +1,15 @@
+[package]
+name = "strophe-engine"
+version = "0.1.0"
+description = "Audio engine for Strophe: transport, click track, loop scheduling, capture."
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+strophe-model = { workspace = true }
+firewheel = { workspace = true }
+blake3 = { workspace = true }

@@ -1,0 +1,18 @@
+[package]
+name = "strophe-widgets"
+version = "0.1.0"
+description = "Masonry custom widgets for Strophe: waveform, track strip, transport, combination grid."
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+# Waveform + peaks now live in the shared `audio-widgets` crate
+# (extracted to the woodshed repo); re-exported from lib.rs.
+# Strophe-specific widgets (track strip, transport, combination grid)
+# will land here and pull masonry/xilem/strophe-model back in when
+# implemented.
+audio-widgets = { workspace = true }

@@ -1,0 +1,18 @@
+[package]
+name = "strophe-headless"
+version = "0.1.0"
+description = "Headless audio-engine test harness for Strophe — scripted demos without the UI."
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+readme = "../../README.md"
+publish = false
+
+[[bin]]
+name = "strophe-headless"
+path = "src/main.rs"
+
+[dependencies]
+strophe-engine = { workspace = true }
