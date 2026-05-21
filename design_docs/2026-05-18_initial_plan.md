@@ -646,6 +646,27 @@ installers, Android via cargo-apk.
   *pre-existing, unrelated* WIP — Mark's in-flight user-themes feature
   (`Settings.user_themes`/`active_user_theme`, `set_user_theme`), not
   anything this extraction touched.
+- **First Strophe consumer of the shared `onset` primitive.** Wired an
+  `OnsetDetector` into `strophe-engine`: fed by the mic samples the
+  engine already drains each `tick` (in `drain_and_advance_capture`),
+  gated behind `set_onset_detection(bool)` (off by default, so the
+  per-frame DSP only runs when a tap-tempo / calibration session needs
+  it). Exposes `detected_bpm()` (audio tap-tempo via the shared
+  `estimate_bpm`), `detected_onset_count()`, `reset_onsets()`. Proves
+  the onset extraction is reusable across the Firewheel engine (the
+  click reuse was already proven; onset/calibration weren't exercised
+  by Strophe until now). No UI yet; substrate for FT3c + tap-tempo.
+- **Where the extraction stopped, and why.** The remaining woodshed
+  audio pieces don't (yet) justify extraction: `SampleBuffer` + its
+  destructive ops (`apply_gain`/`normalize`/`reverse`) have *no* Strophe
+  consumer — Strophe applies gain non-destructively via Firewheel's
+  `Volume::Linear` at the node, not baked into the buffer — so promoting
+  them would be extraction-ahead-of-need with no dedup. The WAV loader
+  (`load_wav_to_buffer`) would drag `hound` into the deliberately
+  zero-dep `audio-primitives`, and Strophe has no file-import path yet
+  (capture is mic-only). `SampleBank` is woodshed-shaped (keyed by
+  `Sound`/`SequencerPattern` ids; Strophe is content-addressed). Revisit
+  WAV when Strophe grows file import (around FT8).
 
 ### Session 2026-05-19 — theme module (shared, via audio-widgets)
 

@@ -58,6 +58,8 @@ use firewheel::core::node::NodeID;
 use firewheel::nodes::stream::ResamplingChannelConfig;
 use strophe_model::TrackId;
 
+use audio_primitives::{estimate_bpm, OnsetDetector};
+
 // Re-export model types that appear in this crate's public API so
 // downstream consumers don't need a separate strophe-model dep just
 // to construct a LayerKey.
@@ -71,6 +73,11 @@ pub use strophe_model::TrackId as ModelTrackId;
 /// Deeler profile maxes at 10 tracks × 1 active = 10 voices; looper
 /// profile is bounded by the user's captured layer count.
 pub const VOICE_POOL_SIZE: usize = 32;
+
+/// How many recent input onsets the engine retains for tap-tempo
+/// estimation. A handful of hits is plenty; 32 matches Woodshed's
+/// onset history bound.
+const ONSET_HISTORY: usize = 32;
 
 /// Engine-side identifier for a model `Layer`. Strophe-model uses
 /// `(TrackId, layer_index)` to address layers; the engine maps each
@@ -132,6 +139,15 @@ pub struct Engine {
     reader_state: StreamReaderState,
     meter_state: PeakMeterStereoState,
     sample_rate: u32,
+    /// Onset detection over captured mic input, backed by the shared
+    /// [`audio_primitives::OnsetDetector`]. Disabled by default; the
+    /// host enables it for audio tap-tempo (and, later, FT3c latency
+    /// calibration). When disabled, `tick` skips the per-frame DSP.
+    onset_detector: OnsetDetector,
+    onset_enabled: bool,
+    /// Recent onset timestamps (detector-clock samples), bounded to
+    /// [`ONSET_HISTORY`]. Feeds [`Engine::detected_bpm`].
+    recent_onsets: std::collections::VecDeque<u64>,
 }
 
 /// Internal: bar-aligned capture state machine.
@@ -282,6 +298,9 @@ impl Engine {
             reader_state,
             meter_state,
             sample_rate,
+            onset_detector: OnsetDetector::new(sample_rate as f32),
+            onset_enabled: false,
+            recent_onsets: std::collections::VecDeque::with_capacity(ONSET_HISTORY),
         })
     }
 
@@ -307,6 +326,47 @@ impl Engine {
         &self.input_scratch
     }
 
+    /// Enable or disable onset detection over captured mic input.
+    /// Disabled by default — when off, `tick` skips the detector's
+    /// per-frame DSP and the onset history stays empty. Turning it off
+    /// also clears any accumulated onsets.
+    ///
+    /// First Strophe consumer of the shared
+    /// [`audio_primitives::OnsetDetector`]; the substrate for audio
+    /// tap-tempo and FT3c latency calibration.
+    pub fn set_onset_detection(&mut self, enabled: bool) {
+        self.onset_enabled = enabled;
+        if !enabled {
+            self.reset_onsets();
+        }
+    }
+
+    /// Whether onset detection is currently running.
+    pub fn onset_detection_enabled(&self) -> bool {
+        self.onset_enabled
+    }
+
+    /// Estimate BPM from recently detected input onsets — audio
+    /// tap-tempo. `None` until at least two onsets have landed. Backed
+    /// by the shared [`audio_primitives::estimate_bpm`] (median
+    /// inter-onset interval, clamped to 40–240 BPM).
+    pub fn detected_bpm(&self) -> Option<f32> {
+        let onsets: Vec<u64> = self.recent_onsets.iter().copied().collect();
+        estimate_bpm(&onsets, self.sample_rate as f32)
+    }
+
+    /// How many onsets are currently in the detection history.
+    pub fn detected_onset_count(&self) -> usize {
+        self.recent_onsets.len()
+    }
+
+    /// Clear the onset detector + history. Use when beginning a fresh
+    /// tap-tempo capture so prior playing doesn't bias the estimate.
+    pub fn reset_onsets(&mut self) {
+        self.onset_detector.reset();
+        self.recent_onsets.clear();
+    }
+
     /// Drain the reader into the scratch buffer and feed the
     /// bar-aligned capture state machine. Called from `tick`.
     fn drain_and_advance_capture(&mut self) {
@@ -322,6 +382,14 @@ impl Engine {
         scratch.resize(available, 0.0);
         let _ = self.reader_state.read_interleaved(&mut scratch);
         self.advance_pending_capture(&scratch);
+        if self.onset_enabled {
+            for ts in self.onset_detector.feed(&scratch) {
+                if self.recent_onsets.len() >= ONSET_HISTORY {
+                    self.recent_onsets.pop_front();
+                }
+                self.recent_onsets.push_back(ts);
+            }
+        }
         self.input_scratch = scratch;
     }
 
