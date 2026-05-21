@@ -7,6 +7,7 @@ use xilem::style::Style;
 use xilem::view::{flex_col, flex_row, label, sized_box, text_button, AnyFlexChild, FlexExt};
 use xilem::WidgetView;
 
+use strophe_engine::CapturePhase;
 use strophe_widgets::theme::{mono_family, SP_1, SP_2, SP_3, TS_SM, TS_XL};
 use strophe_widgets::{db_to_norm, meter_view};
 
@@ -63,8 +64,14 @@ pub fn transport(state: &AppState) -> impl WidgetView<AppState> + use<> {
     ))
     .gap(SP_3);
 
+    // While a free (unclocked) capture is running, Record becomes Stop.
+    let record_label = if matches!(state.capture_phase, CapturePhase::FreeRecording { .. }) {
+        "■ Stop recording"
+    } else {
+        "● Record (armed track)"
+    };
     let controls = flex_row((
-        text_button("● Record (armed track)", |st: &mut AppState| st.record()),
+        text_button(record_label, |st: &mut AppState| st.record()),
         text_button("■ Stop all loops", |st: &mut AppState| st.stop_all()),
     ))
     .gap(SP_3);

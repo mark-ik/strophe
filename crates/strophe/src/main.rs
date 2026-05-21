@@ -170,24 +170,35 @@ impl AppState {
         }
     }
 
-    /// Begin a bar-aligned capture into the armed track. No-op if no
-    /// track is armed. Count-in comes from the session and is skipped
-    /// when the master clock is off.
+    /// Record into the armed track. No-op if no track is armed.
+    ///
+    /// - **Master clock on:** a bar-aligned, fixed-length capture with
+    ///   count-in (current behavior).
+    /// - **Master clock off:** a free / variable-length capture — this
+    ///   call *toggles* it: first press starts recording immediately,
+    ///   second press stops it (the loop is whatever length you played).
     pub(crate) fn record(&mut self) {
         let Some(armed_idx) = self.armed_track() else {
             return;
         };
-        let count_in = if self.session.master_clock_enabled {
-            self.session.count_in_bars
+        if self.session.master_clock_enabled {
+            let count_in = self.session.count_in_bars;
+            if let Ok(engine) = &mut self.engine {
+                if engine
+                    .arm_bar_aligned_capture(CAPTURE_BARS, count_in)
+                    .is_ok()
+                {
+                    self.capturing_track = Some(armed_idx);
+                }
+            }
         } else {
-            0
-        };
-        if let Ok(engine) = &mut self.engine {
-            if engine
-                .arm_bar_aligned_capture(CAPTURE_BARS, count_in)
-                .is_ok()
-            {
-                self.capturing_track = Some(armed_idx);
+            let recording = matches!(self.capture_phase, CapturePhase::FreeRecording { .. });
+            if let Ok(engine) = &mut self.engine {
+                if recording {
+                    engine.stop_free_capture(); // tick picks up the Complete buffer
+                } else if engine.start_free_capture().is_ok() {
+                    self.capturing_track = Some(armed_idx);
+                }
             }
         }
     }
@@ -481,6 +492,14 @@ pub(crate) fn capture_phase_text(phase: &CapturePhase, sample_rate: u32) -> Stri
         CapturePhase::Recording { progress } => {
             format!("recording… {:.0}%", progress * 100.0)
         }
+        CapturePhase::FreeRecording { samples_done } => {
+            let secs = if sample_rate > 0 {
+                *samples_done as f32 / sample_rate as f32
+            } else {
+                0.0
+            };
+            format!("recording (free)… {secs:.1}s — press Record to stop")
+        }
         CapturePhase::Complete => "captured".to_string(),
     }
 }
@@ -519,8 +538,11 @@ fn app_logic(state: &mut AppState) -> impl WidgetView<AppState> + use<> {
             // Promote a completed capture into a model layer + engine
             // playback.
             if let Some(samples) = captured {
-                if let Some(track_idx) = state.capturing_track.take() {
-                    if track_idx < state.session.tracks.len() {
+                let target = state.capturing_track.take();
+                if let Some(track_idx) = target {
+                    // A free capture stopped instantly yields an empty
+                    // buffer — skip rather than store a zero-length layer.
+                    if !samples.is_empty() && track_idx < state.session.tracks.len() {
                         let sr = state.sample_rate;
                         let bars = state.session.bars_per_phrase;
                         let bpm = state.session.bpm;
@@ -549,8 +571,16 @@ fn app_logic(state: &mut AppState) -> impl WidgetView<AppState> + use<> {
                         // now that the new layer is in the store + model.
                         state.recompute_combined(track_idx);
                         let key = LayerKey::new(track_id, layer_index);
+                        // Clocked: start at the next bar (phase-lock).
+                        // Unclocked/free: start immediately (no grid to
+                        // wait for).
+                        let clocked = state.session.master_clock_enabled;
                         if let Ok(engine) = &mut state.engine {
-                            let _ = engine.play_layer_at_next_bar(key, samples, 1.0, true);
+                            let _ = if clocked {
+                                engine.play_layer_at_next_bar(key, samples, 1.0, true)
+                            } else {
+                                engine.play_layer(key, samples, 1.0, true)
+                            };
                         }
                         state.playing.push(key);
                     }

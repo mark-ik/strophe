@@ -169,6 +169,10 @@ enum PendingCapture {
     },
     /// Currently accumulating real input samples.
     Recording(capture::Capture),
+    /// Free (unclocked) capture — accumulates every drained sample with
+    /// no target length, until `stop_free_capture`. The master-clock-off
+    /// looper mode (variable-length loops).
+    FreeRecording(Vec<f32>),
     /// Capture completed; buffer ready for `take_bar_aligned_capture`.
     Complete(Vec<f32>),
 }
@@ -476,6 +480,31 @@ impl Engine {
         Ok(())
     }
 
+    /// Start a **free (unclocked) capture** immediately — no bar wait,
+    /// no count-in. Records every drained input sample until
+    /// [`Self::stop_free_capture`]. This is the master-clock-off looper
+    /// mode (variable-length loops). Returns `Err` if a capture is
+    /// already in progress.
+    pub fn start_free_capture(&mut self) -> Result<(), EngineError> {
+        if !matches!(self.pending_capture, PendingCapture::Idle) {
+            return Err(EngineError::Graph("capture already in progress".into()));
+        }
+        self.pending_capture = PendingCapture::FreeRecording(Vec::new());
+        Ok(())
+    }
+
+    /// Stop a free capture and mark its buffer ready for
+    /// [`Self::take_bar_aligned_capture`]. No-op unless a free capture
+    /// is running.
+    pub fn stop_free_capture(&mut self) {
+        if matches!(self.pending_capture, PendingCapture::FreeRecording(_)) {
+            let taken = std::mem::replace(&mut self.pending_capture, PendingCapture::Idle);
+            if let PendingCapture::FreeRecording(buf) = taken {
+                self.pending_capture = PendingCapture::Complete(buf);
+            }
+        }
+    }
+
     /// If a bar-aligned capture has completed, drain its buffer and
     /// reset state to Idle. Returns `None` while waiting or recording.
     pub fn take_bar_aligned_capture(&mut self) -> Option<Vec<f32>> {
@@ -502,6 +531,9 @@ impl Engine {
             },
             PendingCapture::Recording(c) => CapturePhase::Recording {
                 progress: c.progress(),
+            },
+            PendingCapture::FreeRecording(buf) => CapturePhase::FreeRecording {
+                samples_done: buf.len(),
             },
             PendingCapture::Complete(_) => CapturePhase::Complete,
         }
@@ -565,6 +597,10 @@ impl Engine {
         self.pending_capture = match current {
             PendingCapture::Idle => PendingCapture::Idle,
             PendingCapture::Complete(buf) => PendingCapture::Complete(buf),
+            PendingCapture::FreeRecording(mut buf) => {
+                buf.extend_from_slice(new_samples);
+                PendingCapture::FreeRecording(buf)
+            }
             PendingCapture::Waiting {
                 bars_until_start,
                 target_samples,
@@ -873,6 +909,11 @@ pub enum CapturePhase {
     },
     Recording {
         progress: f32,
+    },
+    /// Free (unclocked) capture in progress — no fixed length. Records
+    /// until stopped; `samples_done` is how much is captured so far.
+    FreeRecording {
+        samples_done: usize,
     },
     Complete,
 }

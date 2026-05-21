@@ -601,6 +601,28 @@ installers, Android via cargo-apk.
 
 (populated as work proceeds)
 
+### Session 2026-05-21 — free / unclocked capture (variable-length loops)
+
+- **Engine:** new `PendingCapture::FreeRecording(Vec<f32>)` accumulates
+  *every* drained input sample with no target length; `start_free_capture`
+  (immediate — no bar wait, no count-in) / `stop_free_capture`
+  (→ `Complete`, retrieved by the same `take_bar_aligned_capture`).
+  `CapturePhase::FreeRecording { samples_done }` for UI. The bar-aligned
+  path is untouched.
+- **App:** `record()` branches on the master clock — on: bar-aligned
+  fixed-length + count-in (as before); **off: free capture, toggled**
+  (first Record press starts, second stops; the loop is whatever length
+  you played). Capture promotion now plays the new layer **immediately**
+  (`play_layer`) when unclocked instead of waiting for a bar
+  (`play_layer_at_next_bar`), and **guards empty buffers** (instant
+  stop yields nothing → no zero-length layer).
+- **Transport:** the Record button becomes **"■ Stop recording"** while
+  a free capture runs; `capture_phase_text` shows elapsed seconds.
+- This completes the looper's "variable-length / optional master clock"
+  promise: clock off ⇒ no metronome, no count-in, free-length loops that
+  start looping the moment you stop. Build clean (8.1s); engine 15+3,
+  model 30+2 green. Runtime-validate the toggle + free-loop playback.
+
 ### Session 2026-05-21 — runtime tempo (click re-render)
 
 - **Engine `set_tempo(bpm, beats_per_bar)`** re-renders the click loop
