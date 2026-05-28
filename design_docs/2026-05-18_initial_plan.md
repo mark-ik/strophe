@@ -640,10 +640,12 @@ installers, Android via cargo-apk.
   looper a real tempo control.
 - **Settings UI:** BPM −/+ (±5) and beats/bar −/+ steppers (no longer
   dead controls — earlier they'd have been misleading).
-- **Caveat (documented):** already-playing layers are fixed-length
-  buffers at their captured tempo — `set_tempo` does *not* time-stretch
-  them; tempo is meant to be set before recording. Build clean (7.5s);
-  engine 15+3, model 30+2 green.
+- **Already-playing layers are fixed-length buffers at their captured
+  tempo** — `set_tempo` doesn't time-stretch them. Rather than let them
+  drift against the new grid, a tempo/bar-length change now **stops all
+  playing loops** (`resync_tempo` calls `stop_all` first). Tempo is a
+  set-before-recording gesture. Build clean; engine 15+3, model 30+2
+  green.
 
 ### Session 2026-05-20 — master clock + count-in
 

@@ -255,7 +255,13 @@ impl AppState {
     /// Push the session's tempo + bar length to the engine click and
     /// re-apply the master-clock mute state (a re-render starts the new
     /// click node at unity volume).
+    ///
+    /// **Stops all playing loops first.** They're fixed-length buffers
+    /// captured at the old tempo; on the new grid they'd drift against
+    /// the click, so a tempo/bar-length change clears them rather than
+    /// letting them run out of phase.
     fn resync_tempo(&mut self) {
+        self.stop_all();
         let bpm = self.session.bpm;
         let beats = self.session.time_signature.numerator;
         let clock = self.session.master_clock_enabled;
