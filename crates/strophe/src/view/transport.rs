@@ -70,9 +70,14 @@ pub fn transport(state: &AppState) -> impl WidgetView<AppState> + use<> {
     } else {
         "● Record (armed track)"
     };
+    // Undo/redo labels hint availability (no-op when unavailable).
+    let undo_label = if state.can_undo() { "↶ Undo" } else { "↶ —" };
+    let redo_label = if state.can_redo() { "↷ Redo" } else { "↷ —" };
     let controls = flex_row((
         text_button(record_label, |st: &mut AppState| st.record()),
         text_button("■ Stop all loops", |st: &mut AppState| st.stop_all()),
+        text_button(undo_label, |st: &mut AppState| st.undo()),
+        text_button(redo_label, |st: &mut AppState| st.redo()),
     ))
     .gap(SP_3);
 

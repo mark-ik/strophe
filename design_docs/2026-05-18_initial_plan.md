@@ -601,6 +601,33 @@ installers, Android via cargo-apk.
 
 (populated as work proceeds)
 
+### Session 2026-05-21 — undo / redo (FT6 nondestructive)
+
+- **Model:** `History` gained `undo` / `redo` (built on `checkout` —
+  walk to parent / to child) + `can_undo` / `can_redo`. Linear v0, so
+  redo finds the single child of head. Every edit we commit
+  (AppendLayer, SetLayer*, SelectActiveLayer, ArmTrack, SetBpm,
+  SetMasterClock, SetCountInBars, SetTimeSignature) is now reversible.
+  +1 round-trip test.
+- **App reconcile:** after a history move the session can differ in
+  tempo/clock, the layer set, mute/gain/active-variation, arm. So
+  `rebuild_after_history` rebuilds *everything derived*:
+  `recompute_all_peaks` (per-layer + combined waveforms from the store,
+  to match the restored layer set), `resync_tempo` (re-render click +
+  stop voices), then `reconcile_playback` (restart exactly the layers
+  that `is_layer_audible` in the restored state). The media store is the
+  monotonic content pool — undo never removes from it — so every
+  restored layer's samples still resolve.
+- **UI:** ↶ Undo / ↷ Redo buttons in the transport (labels show
+  availability; no-op when unavailable). Exercises the whole
+  "nondestructive everything" architecture — the payoff for routing all
+  mutations through `History`.
+- model 31 (+1) tests, engine 15+3 green; app builds.
+- **Env note:** the shared xilem fork moved to `crates/xilem/` and was
+  mid-edit (external-composite `window` plumbing) — briefly broke the
+  app build (`masonry_winit`), unrelated to this work; resolved on
+  re-build.
+
 ### Session 2026-05-21 — free / unclocked capture (variable-length loops)
 
 - **Engine:** new `PendingCapture::FreeRecording(Vec<f32>)` accumulates

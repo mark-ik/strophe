@@ -271,6 +271,92 @@ impl AppState {
         }
     }
 
+    // === Undo / redo ===
+
+    pub(crate) fn can_undo(&self) -> bool {
+        self.history.can_undo()
+    }
+
+    pub(crate) fn can_redo(&self) -> bool {
+        self.history.can_redo()
+    }
+
+    /// Undo the last edit and reconcile the engine + derived state to
+    /// the restored session.
+    pub(crate) fn undo(&mut self) {
+        if self.history.undo(&mut self.session) {
+            self.rebuild_after_history();
+        }
+    }
+
+    /// Redo the next edit and reconcile.
+    pub(crate) fn redo(&mut self) {
+        if self.history.redo(&mut self.session) {
+            self.rebuild_after_history();
+        }
+    }
+
+    /// After a history move the session can differ in tempo/clock, layer
+    /// set, mute/gain/active-variation, etc. Rebuild everything derived
+    /// from it: waveform peaks, the engine click, and the set of playing
+    /// voices. (The media store is the monotonic content pool — undo
+    /// never removes from it — so every restored layer's samples are
+    /// still resolvable.)
+    fn rebuild_after_history(&mut self) {
+        self.recompute_all_peaks();
+        self.resync_tempo(); // stops voices + re-renders click to session tempo/clock
+        self.reconcile_playback(); // restart the layers that should now be audible
+        if self.expanded_track.is_some_and(|t| t >= self.session.tracks.len()) {
+            self.expanded_track = None;
+        }
+        self.capturing_track = None;
+    }
+
+    /// Rebuild per-layer + combined waveform peaks for every track from
+    /// the content store, to match the current layer set.
+    fn recompute_all_peaks(&mut self) {
+        let mut new_layer: Vec<Vec<Vec<Peak>>> = Vec::with_capacity(self.session.tracks.len());
+        for track in &self.session.tracks {
+            let mut per_layer = Vec::with_capacity(track.layers.len());
+            for layer in &track.layers {
+                let pk = self
+                    .session
+                    .phrases
+                    .get(&layer.phrase_id)
+                    .and_then(|p| self.store.get(&p.media))
+                    .map(|b| compute_peaks(&b.samples, WAVEFORM_COLUMNS))
+                    .unwrap_or_default();
+                per_layer.push(pk);
+            }
+            new_layer.push(per_layer);
+        }
+        self.layer_peaks = new_layer;
+        self.combined_peaks = vec![Vec::new(); self.session.tracks.len()];
+        for ti in 0..self.session.tracks.len() {
+            self.recompute_combined(ti);
+        }
+    }
+
+    /// Restart playback of exactly the layers that should be audible in
+    /// the current session state (per each track's playback mode + mute).
+    /// Assumes voices were already cleared (e.g. by `resync_tempo`).
+    fn reconcile_playback(&mut self) {
+        let mut audible: Vec<(usize, usize)> = Vec::new();
+        for (ti, track) in self.session.tracks.iter().enumerate() {
+            for (li, layer) in track.layers.iter().enumerate() {
+                if track
+                    .playback_mode
+                    .is_layer_audible(li as u16, layer.muted)
+                {
+                    audible.push((ti, li));
+                }
+            }
+        }
+        for (ti, li) in audible {
+            self.play_layer_from_store(ti, li);
+        }
+    }
+
     /// Recompute a track's combined (all-layers-summed) waveform peaks
     /// from the content store. Called at capture time, when a layer is
     /// added. Sums every layer regardless of mute — the compact strip

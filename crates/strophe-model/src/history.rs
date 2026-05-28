@@ -407,6 +407,44 @@ impl History {
         let keepset: BTreeSet<NodeId> = self.ancestor_chain(keep).into_iter().collect();
         self.nodes.retain(|id, _| keepset.contains(id));
     }
+
+    /// Whether there's an edit to undo (head is past the root).
+    pub fn can_undo(&self) -> bool {
+        self.nodes
+            .get(&self.head)
+            .and_then(|n| n.parent)
+            .is_some()
+    }
+
+    /// Whether there's an edit to redo (head has a child node).
+    pub fn can_redo(&self) -> bool {
+        self.nodes.values().any(|n| n.parent == Some(self.head))
+    }
+
+    /// Undo the last edit: move head to its parent, inverting the edit
+    /// against `session`. Returns `false` (no-op) if already at the
+    /// root.
+    pub fn undo(&mut self, session: &mut Session) -> bool {
+        let Some(parent) = self.nodes.get(&self.head).and_then(|n| n.parent) else {
+            return false;
+        };
+        self.checkout(parent, session).is_ok()
+    }
+
+    /// Redo: move head forward to its child (if any), re-applying that
+    /// edit. v0 history is linear, so there's at most one child.
+    /// Returns `false` (no-op) if head has no child.
+    pub fn redo(&mut self, session: &mut Session) -> bool {
+        let Some(child) = self
+            .nodes
+            .values()
+            .find(|n| n.parent == Some(self.head))
+            .map(|n| n.id)
+        else {
+            return false;
+        };
+        self.checkout(child, session).is_ok()
+    }
 }
 
 impl Default for History {
@@ -444,6 +482,30 @@ mod tests {
         assert_eq!(h.head, n1);
         assert_eq!(s.bpm, 90.0);
         assert_eq!(h.nodes.len(), 2);
+    }
+
+    #[test]
+    fn undo_redo_round_trips() {
+        let mut s = Session::new_default();
+        let mut h = History::new();
+        assert!(!h.can_undo() && !h.can_redo());
+
+        h.commit(Edit::SetBpm { from: 120.0, to: 90.0 }, &mut s, 0);
+        assert_eq!(s.bpm, 90.0);
+        assert!(h.can_undo() && !h.can_redo());
+
+        assert!(h.undo(&mut s));
+        assert_eq!(s.bpm, 120.0);
+        assert!(!h.can_undo() && h.can_redo());
+
+        assert!(h.redo(&mut s));
+        assert_eq!(s.bpm, 90.0);
+
+        // Undo back to root, then a further undo is a no-op.
+        assert!(h.undo(&mut s));
+        assert_eq!(s.bpm, 120.0);
+        assert!(!h.undo(&mut s)); // already at root
+        assert!(h.can_redo()); // but the edit is still redoable
     }
 
     #[test]
