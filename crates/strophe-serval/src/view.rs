@@ -131,7 +131,7 @@ fn peer(name: &str, initials: &str, voice: &str, sub: &str, turn: bool) -> Child
 /// The pass-the-mic rail. Peers are placeholder data until the sync layer;
 /// "You" reflects the live arm/record state.
 fn rail(state: &AppState) -> Child {
-    let you_sub = if state.recording {
+    let you_sub = if state.is_recording() {
         "your turn \u{00b7} recording"
     } else {
         "your turn"
@@ -177,7 +177,7 @@ fn table(state: &AppState) -> Child {
 
 fn lane(state: &AppState, i: usize) -> Child {
     let track = &state.session.tracks[i];
-    let recording = track.armed && state.recording;
+    let recording = track.armed && state.is_recording();
     let mut cls = String::from("lane");
     if recording {
         cls.push_str(" lane-rec");
@@ -293,7 +293,7 @@ fn lane(state: &AppState, i: usize) -> Child {
 }
 
 fn transport(state: &AppState) -> Child {
-    let rec_cls = if state.recording { "record record-armed" } else { "record" };
+    let rec_cls = if state.is_recording() { "record record-armed" } else { "record" };
     let bpm = format!("{}", state.session.bpm.round() as u32);
     let ts = state.session.time_signature;
     let meter_txt = format!("{}/{}", ts.numerator, ts.denominator);

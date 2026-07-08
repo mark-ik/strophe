@@ -162,9 +162,9 @@ pub fn reconcile(registry: &mut LeafRegistry<u64>, state: &AppState) {
             registry.insert(key, Box::new(WaveformLeaf::new(summed_peaks(sig, 96), color, sig)));
         }
     }
-    // Output meters (placeholder levels until the engine feeds real ones).
-    ensure_meter(registry, METER_L, 0.72);
-    ensure_meter(registry, METER_R, 0.61);
+    // Output meters, fed the engine's read-back peak level per channel.
+    ensure_meter(registry, METER_L, state.meter_level(0));
+    ensure_meter(registry, METER_R, state.meter_level(1));
 }
 
 fn ensure_meter(registry: &mut LeafRegistry<u64>, key: u64, level: f32) {

@@ -5386,6 +5386,7 @@ dependencies = [
  "serval-layout",
  "serval-scripted-dom",
  "serval-winit-host",
+ "strophe-engine",
  "strophe-model",
  "wgpu 29.0.4",
  "winit",

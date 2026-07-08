@@ -221,6 +221,26 @@ either the Masonry `strophe` (until S6) or `strophe-serval` runnable.
 
 ## Progress
 
+- 2026-07-08: **Audio engine wired — strophe-serval makes sound (parity with the
+  Masonry app's core function).** `state.rs`'s `AppState` now owns a live
+  `strophe_engine::Engine` + `InMemoryStore`, mirroring the Masonry app's glue:
+  `toggle_record` arms a bar-aligned (or free) capture, `tick()` advances the
+  engine ~60fps and promotes a completed capture into a real `AppendLayer` +
+  looping playback, and arm / mute / tempo / click drive the engine
+  (`set_click_enabled`, `set_tempo`, `stop/play_layer`). The host drives the tick
+  from a winit `WaitUntil` timer via `runner.update(|s| s.tick())` (mutate +
+  re-diff). `is_recording()` derives the record light + rail state from the real
+  `CapturePhase` (no more manual flag). The output meters read the engine's
+  `peak_db()` — a visible audio-flow signal. Demo layers stay silent placeholders
+  (`MediaRef::ZERO`); real captures are audible. **Verified end to end:** Mark
+  heard the metronome (engine + click + device confirmed by ear); pressing Record
+  showed the count-in/recording phase (red light, rail "recording", red lane) and
+  completed into a real captured layer (Guitar 3 → 4) that loops — the
+  capture → store → AppendLayer → playback chain. This clears the S6 blocker:
+  retiring the Masonry app no longer loses audio. Follow-ups: real per-layer peak
+  data into the waveform leaves (needs `compute_peaks` lifted out of the
+  Masonry-coupled `strophe-widgets`); input-monitor + count-in click polish;
+  idle-tick throttling (currently a steady 60fps like the Masonry app).
 - 2026-07-08: **S5 done — the waveforms + meters are chisel leaves.** The signature
   visual (each track's summed loop) is now a chisel Path-A leaf — a filled,
   mirrored amplitude envelope, resolution-independent and tile-cached — replacing

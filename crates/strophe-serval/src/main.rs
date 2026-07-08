@@ -15,6 +15,7 @@ mod view;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use layout_dom_api::{DomMutation, LayoutDomMut as _};
 use netrender::{ColorLoad, ExternalTexturePlacement, NetrenderOptions};
@@ -23,7 +24,7 @@ use serval_layout::{IncrementalLayout, ScrollOffsets};
 use serval_scripted_dom::{NodeId, ScriptedDom};
 use serval_winit_host::SurfaceHost;
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, MouseButton, WindowEvent};
+use winit::event::{ElementState, MouseButton, StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 use xilem_serval::{PointerClick, Propagation, ServalAppRunner};
@@ -32,6 +33,10 @@ use state::AppState;
 use view::{root, Child};
 
 type Runner = ServalAppRunner<AppState, fn(&AppState) -> Child, Child>;
+
+/// Engine tick cadence (~60 fps). Firewheel wants `update()` roughly per frame;
+/// this drives `engine.tick()` (meter read-back, capture promotion, playback).
+const TICK: Duration = Duration::from_millis(16);
 
 struct App {
     window: Option<Arc<Window>>,
@@ -202,6 +207,23 @@ impl ApplicationHandler for App {
         self.window = Some(window);
         self.host = Some(host);
         self.runner = Some(runner);
+        // Kick off the engine-tick timer.
+        event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now() + TICK));
+    }
+
+    fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
+        // ~60fps engine tick: advance the audio engine (meter, capture
+        // promotion, playback) and repaint. `update` mutates the owned state
+        // and re-diffs the view, so a completed capture's new layer appears.
+        if matches!(cause, StartCause::ResumeTimeReached { .. }) {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.update(|s| s.tick());
+            }
+            if let Some(window) = self.window.as_ref() {
+                window.request_redraw();
+            }
+            event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now() + TICK));
+        }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
