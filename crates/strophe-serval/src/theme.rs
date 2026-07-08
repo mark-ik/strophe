@@ -9,9 +9,9 @@
 /// is a fixed warm-dark world for v1.
 pub fn sheet() -> String {
     r#"
-/* Palette lives on `.app` (the root element of the tree), not `:root` —
-   serval doesn't match `:root`, so vars defined there never inherit; on
-   `.app` they cascade to every descendant like the inline `--voice` does. */
+/* Palette lives on `.app`, the tree's root element — so `:root` and `.app`
+   are the same element here and the vars cascade to every descendant, like the
+   inline per-lane `--voice` does. */
 .app { display: flex; flex-direction: column; width: 100%; height: 100%;
        box-sizing: border-box; font-family: sans-serif; font-size: 15px;
        --ground: #17130e; --surface: #201a12; --surface-2: #2b2318; --raised: #342a1c;
@@ -23,13 +23,8 @@ pub fn sheet() -> String {
 .mono { font-family: monospace; }
 
 /* top strip */
-/* Dividers use a full `border: ...solid transparent` then recolour one side.
-   serval paints a spurious 3px currentColor border on the OPPOSITE edge when
-   given a single-side shorthand (`border-bottom` etc.), but the full 4-side
-   shorthand is clean — so we set all four widths uniformly and only tint the
-   edge we want. */
 .top { display: flex; align-items: center; padding: 12px 22px; flex-shrink: 0;
-       border: 1px solid transparent; border-bottom-color: #2e2619; }
+       border-bottom: 1px solid var(--line-soft); }
 .brand { font-size: 17px; color: var(--text); }
 .brand-dot { color: var(--voice-amber); }
 .session-name { color: var(--text-dim); font-size: 13px; padding-left: 14px; }
@@ -47,7 +42,7 @@ pub fn sheet() -> String {
 
 /* pass-the-mic rail */
 .rail { display: flex; flex-direction: column; width: 208px; flex-shrink: 0; padding: 16px 12px;
-        border: 1px solid transparent; border-right-color: #2e2619; }
+        border-right: 1px solid var(--line-soft); }
 .eyebrow { color: var(--text-faint); font-size: 10px; text-transform: uppercase; letter-spacing: 2px;
            padding: 0 6px 10px; }
 .peer { display: flex; align-items: center; padding: 9px 8px; border-radius: 11px; margin-bottom: 2px; }
@@ -112,7 +107,7 @@ pub fn sheet() -> String {
 
 /* transport */
 .transport { display: flex; align-items: center; padding: 12px 24px 14px; flex-shrink: 0;
-             border: 1px solid transparent; border-top-color: #2e2619; background-color: var(--surface); }
+             border-top: 1px solid var(--line-soft); background-color: var(--surface); }
 .t-left { display: flex; align-items: center; flex-grow: 1; }
 .t-right { display: flex; align-items: center; flex-grow: 1; }
 .t-right-inner { display: flex; align-items: center; margin-left: auto; }

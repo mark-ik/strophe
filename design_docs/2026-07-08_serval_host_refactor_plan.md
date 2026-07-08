@@ -221,6 +221,19 @@ either the Masonry `strophe` (until S6) or `strophe-serval` runnable.
 
 ## Progress
 
+- 2026-07-08: **Two of the S1 quirks were serval bugs — fixed upstream**
+  (serval `dab0ee5`, regression tests included, 267-test suite green):
+  - `:root` now matches the root element (`is_root` tested `parent().is_none()`,
+    but the root's parent is the document *node*; it now tests parent-element
+    semantics). Palette vars on `.app` are unchanged since `.app` *is* the root,
+    but `:root` works from here on.
+  - A single-side border shorthand (`border-bottom` etc.) no longer paints a
+    phantom 3px `currentColor` border on the other edges — the paint path now
+    zeroes a none/hidden side's width per CSS 2.1 §8.5.1, matching taffy.
+  `theme.rs` dropped the transparent-border workaround for natural
+  `border-<side>: 1px solid var(--line-soft)` dividers; render re-verified
+  edge-clean against the fixed serval. The `min-height: 0` nested-flex note is
+  standard CSS behaviour, not a bug — it stays.
 - 2026-07-08: **S1 done — the approved loop-recorder UI renders in serval.**
   `view.rs` + `theme.rs` build the one-screen design from the 2026-07-08 concept:
   the pass-the-mic **rail** (the circle: You/Jonah/Mara/Eli + Hand off), the
