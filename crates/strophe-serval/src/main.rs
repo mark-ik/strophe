@@ -1,13 +1,13 @@
-//! Strophe's serval desktop host (serval-host refactor S0: scaffold).
+//! Strophe's serval desktop host (serval-host refactor).
 //!
-//! A winit window presenting a serval view tree: `ServalAppRunner` diffs the
-//! views into a `ScriptedDom`, a retained `IncrementalLayout` lays it out, the
-//! paint list lowers to a `netrender::Scene`, and `serval-winit-host`'s
-//! `SurfaceHost` rasterizes and composites onto the backbuffer. This is the
-//! same host skeleton woodshed-serval runs; S1+ grows the real view layer
-//! (`strophe-views`) and theme over `AppState`. For S0 it renders a themed
-//! placeholder with a clickable counter, proving the render + input + update
-//! loop end to end.
+//! A winit window presenting the Strophe view tree: `ServalAppRunner` diffs
+//! the views into a `ScriptedDom`, a retained `IncrementalLayout` lays it
+//! out, the paint list lowers to a `netrender::Scene`, and
+//! `serval-winit-host`'s `SurfaceHost` rasterizes and composites. The view
+//! layer + theme live in [`view`] / [`theme`]; S2 wires them to `AppState`.
+
+mod theme;
+mod view;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -23,59 +23,11 @@ use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
-use xilem_serval::{
-    clickable, el, text, AnyView, PointerClick, Propagation, ServalAppRunner, ServalCtx,
-    ServalElement,
-};
+use xilem_serval::{PointerClick, Propagation, ServalAppRunner};
 
-/// Boxed heterogeneous child view over [`Ui`].
-type Child = Box<dyn AnyView<Ui, (), ServalCtx, ServalElement>>;
+use view::{root, Child, Ui};
+
 type Runner = ServalAppRunner<Ui, fn(&Ui) -> Child, Child>;
-
-/// S0 placeholder state. S1 replaces this with Strophe's `AppState`.
-#[derive(Default)]
-struct Ui {
-    clicks: u32,
-}
-
-/// S0 placeholder view: a title, a subtitle, and one clickable counter that
-/// exercises the full host loop (hit-test -> dispatch -> update -> repaint).
-fn root(ui: &Ui) -> Child {
-    Box::new(
-        el(
-            "div",
-            (
-                el("div", text("Strophe")).attr("class", "title"),
-                el("div", text("serval host — S0 scaffold"))
-                    .attr("class", "subtitle"),
-                clickable(
-                    el(
-                        "div",
-                        text(format!("clicked {} times — the host loop works", ui.clicks)),
-                    )
-                    .attr("class", "btn"),
-                    |ui: &mut Ui, _| ui.clicks += 1,
-                ),
-            ),
-        )
-        .attr("class", "root"),
-    )
-}
-
-/// Hardcoded dark placeholder sheet. S1 wires the real tinct-derived theme
-/// (ported from `strophe-widgets::theme`).
-fn placeholder_sheet() -> String {
-    r#"
-.root { width: 100%; height: 100%; box-sizing: border-box; background-color: #17151b;
-        color: #d8d4dc; font-family: sans-serif; font-size: 14px; padding: 28px; }
-.title { font-size: 30px; color: #f0ead6; margin-bottom: 6px; }
-.subtitle { font-size: 14px; color: #8a8391; margin-bottom: 28px; }
-.btn { display: inline-block; background-color: #2a2630; color: #d8d4dc;
-       padding: 10px 18px; border-radius: 8px; }
-.btn:hover { background-color: #3a3442; }
-"#
-    .to_string()
-}
 
 struct App {
     window: Option<Arc<Window>>,
@@ -193,7 +145,10 @@ impl ApplicationHandler for App {
                 .create_window(
                     Window::default_attributes()
                         .with_title("Strophe")
-                        .with_inner_size(winit::dpi::LogicalSize::new(1000.0, 640.0)),
+                        // Top-anchored + short enough to clear the taskbar on a
+                        // 720-logical laptop screen.
+                        .with_position(winit::dpi::LogicalPosition::new(40.0, 8.0))
+                        .with_inner_size(winit::dpi::LogicalSize::new(1180.0, 700.0)),
                 )
                 .expect("create window"),
         );
@@ -251,7 +206,7 @@ fn main() {
         runner: None,
         layout: None,
         layout_size: (0.0, 0.0),
-        sheet: placeholder_sheet(),
+        sheet: theme::sheet(),
         cursor: (0.0, 0.0),
     };
     event_loop.run_app(&mut app).expect("run app");

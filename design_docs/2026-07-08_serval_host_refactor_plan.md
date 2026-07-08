@@ -221,6 +221,30 @@ either the Masonry `strophe` (until S6) or `strophe-serval` runnable.
 
 ## Progress
 
+- 2026-07-08: **S1 done — the approved loop-recorder UI renders in serval.**
+  `view.rs` + `theme.rs` build the one-screen design from the 2026-07-08 concept:
+  the pass-the-mic **rail** (the circle: You/Jonah/Mara/Eli + Hand off), the
+  **loop table** (four owner-coloured lanes — Guitar/Bass/Drums/Keys — each an
+  overdub stack of layer waveforms, muted layers dimmed, plus M/S/loop controls
+  and an empty-state), and the **transport** (tempo/meter, click + master-clock
+  toggles, the big Record, the output meter). Data is static this slice (S2 wires
+  `AppState`); two interactions are live end-to-end (tap a lane dot to arm, tap
+  Record to toggle capture). Waveforms are lightweight DOM bar stand-ins — S5
+  swaps them for chisel leaves. Verified by client-area screenshot: faithful to
+  the mockup, all four tracks + add-track on one screen, every edge clean.
+  Three serval-CSS lessons banked (all worked around in `theme.rs`, none needed
+  a host change):
+  - **serval doesn't match `:root`.** Palette custom properties live on `.app`
+    (the actual root element); on `:root` they never inherit. Inline `var()`
+    (`--voice` per lane) and `.app`-scoped vars both cascade fine.
+  - **Single-side border shorthands emit a phantom.** `border-bottom` /
+    `border-right` / `border-top` paint a spurious 3px `currentColor` border on
+    the *opposite* edge (a cream frame at the viewport rim here). The full
+    four-side `border:` shorthand is clean, so dividers use
+    `border: 1px solid transparent` + a `border-<side>-color` longhand. Worth a
+    serval-layout paint fix later; the workaround is documented inline.
+  - **Nested flex needs explicit `min-height: 0`** for the loop table to scroll
+    internally instead of shoving the transport off-screen (`.body`/`.table`).
 - 2026-07-08: **S0 done — `strophe-serval` scaffolded and building.** New winit +
   `SurfaceHost` bin (retained `IncrementalLayout` redraw + click dispatch),
   rendering a themed placeholder with a working counter (render + hit-test +
