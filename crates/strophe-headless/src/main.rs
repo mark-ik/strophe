@@ -123,6 +123,9 @@ fn main() {
                 CapturePhase::Recording { progress } => {
                     format!("Recording {:.0}%", progress * 100.0)
                 }
+                CapturePhase::FreeRecording { samples_done } => {
+                    format!("FreeRecording ({samples_done} samples)")
+                }
                 CapturePhase::Complete => "Complete".to_string(),
             };
             println!(

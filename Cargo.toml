@@ -1,13 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/strophe",
     "crates/strophe-engine",
     "crates/strophe-model",
-    "crates/strophe-widgets",
     "crates/strophe-headless",
-    # Serval-host refactor (2026-07-08 plan): the new UI stack, alongside
-    # the Masonry `strophe` bin until the parity cut.
+    # The serval-host UI (2026-07-08 refactor). At the parity cut the Masonry
+    # `strophe` bin + `strophe-widgets` were deleted; this is the only UI now.
     "crates/strophe-serval",
 ]
 
@@ -24,13 +22,6 @@ rust-version = "1.92"
 # targets, so they don't appear here.
 strophe-engine = { path = "crates/strophe-engine", version = "0.1.0" }
 strophe-model = { path = "crates/strophe-model", version = "0.1.0" }
-strophe-widgets = { path = "crates/strophe-widgets", version = "0.1.0" }
-
-# Shared audio widgets — the first realized `audio-widgets` extraction
-# (waveform + peaks). Lives in the woodshed repo; consumed cross-repo
-# by path-dep. `strophe-widgets` now re-exports from this rather than
-# carrying its own copy. See memory/project_strophe_audio_pressure_vessel.md.
-audio-widgets = { path = "../woodshed/crates/audio-widgets", version = "0.1.0" }
 
 # Shared pure-DSP primitives — the `audio-primitives` extraction (click
 # synth, streaming onset/tempo, latency estimation). Lives in the
@@ -39,12 +30,6 @@ audio-widgets = { path = "../woodshed/crates/audio-widgets", version = "0.1.0" }
 # the onset/tempo + latency cores are here for FT3c (calibration) and
 # bar-alignment work. Pure std, no engine/UI coupling.
 audio-primitives = { path = "../woodshed/crates/audio-primitives", version = "0.1.0" }
-
-# Domain-neutral reusable UI components (combobox, …) — the generic
-# design-system layer shared across all three Xilem apps (Woodshed,
-# Strophe, Mere). Lives in the woodshed repo; consumed cross-repo.
-# audio-widgets sits one layer above this.
-xilem-components = { path = "../woodshed/crates/xilem-components", version = "0.1.0" }
 
 # Firewheel: modular audio graph engine, the spine of strophe-engine
 # (FT3b-prime). cpal feature enables the default native backend; the
@@ -63,12 +48,6 @@ firewheel = { version = "0.10", features = [
 # (audio-primitives, audio-widgets, audio-devices), not direct
 # coupling. See memory/project_strophe_audio_pressure_vessel.md.
 
-# UI — Masonry fork (the app being retired). Matches woodshed's pins.
-# Rides the GIT dep (no local worktree override): a `paths` override would
-# hijack serval's vendored xilem_core by name — see .cargo/config.toml.
-xilem = { git = "https://github.com/mark-ik/xilem.git", branch = "woodshed-theme", version = "0.4.0" }
-masonry = { git = "https://github.com/mark-ik/xilem.git", branch = "woodshed-theme", version = "0.4.0" }
-masonry_winit = { git = "https://github.com/mark-ik/xilem.git", branch = "woodshed-theme", version = "0.4.0" }
 winit = "0.30"
 
 # UI — serval host (2026-07-08 serval-host refactor). The new UI stack;
@@ -85,8 +64,8 @@ netrender = { git = "https://github.com/mark-ik/netrender.git", branch = "main" 
 paint_list_api = { git = "https://github.com/mark-ik/netrender.git", branch = "main" }
 paint_list_render = { git = "https://github.com/mark-ik/netrender.git", branch = "main" }
 # Host-side surface/compose types only; backend features come from
-# netrender's per-target split. serval stack is wgpu 29 (Masonry is 28;
-# both trees coexist until the parity cut).
+# netrender's per-target split. Single wgpu 29 tree now the Masonry app
+# (wgpu 28) is retired.
 wgpu = { version = "29", default-features = false, features = ["std"] }
 # Pure OKLCH seed-to-palette theming (shared; woodshed's too).
 tinct = { git = "https://github.com/mark-ik/tinct", branch = "main" }
