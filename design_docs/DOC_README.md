@@ -15,10 +15,11 @@ before any other doc in this directory.
   scaffold, workspace skeleton, and feature-target ladder from
   click-track engine through P2P session hand-off.
 - [2026-07-08_serval_host_refactor_plan.md](2026-07-08_serval_host_refactor_plan.md)
-  — Refactor the UI off the Masonry fork onto `xilem_serval` + `chisel`
-  leaves (the audio spine is untouched). Slices S0-S6, both apps runnable
-  throughout; completing it retires the `mark-ik/xilem` fork family-wide
-  (Strophe is its last live consumer via `audio-widgets` / `xilem-components`).
+  — **LANDED.** UI rebuilt fresh on `xilem_serval` (the one-screen loop-recorder
+  design, not a Masonry port) with `chisel` leaf waveforms/meters and the
+  `strophe_engine` spine wired in. The Masonry app + the `mark-ik/xilem` fork
+  are deleted family-wide (strophe + woodshed). Deferred follow-ups listed in
+  the plan's Progress log.
 
 ## Archive
 

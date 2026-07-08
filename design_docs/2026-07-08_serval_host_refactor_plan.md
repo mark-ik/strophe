@@ -1,10 +1,12 @@
 # Strophe onto the serval host + chisel leaves (Masonry retirement)
 
-**Status (2026-07-08):** proposed; first design pass. Refactors Strophe's UI
-off the `mark-ik/xilem` Masonry fork onto `xilem_serval` (serval's third
-`xilem_core` backend, the same host woodshed migrated to) with the custom-paint
-widgets reborn as `chisel` leaves. The audio spine does not move. Completing
-this retires the fork family-wide.
+**Status (2026-07-08): LANDED.** Strophe's UI was rebuilt fresh on `xilem_serval`
+(serval's third `xilem_core` backend) — not a port of the Masonry surfaces but
+the new one-screen loop-recorder design — with the waveform + meter as `chisel`
+leaves and the `strophe_engine` audio spine wired in unchanged. The Masonry app
+and the `mark-ik/xilem` fork are deleted family-wide (strophe + woodshed). See
+the Progress log for the slice-by-slice receipts; the design-forward track ran
+S0 (scaffold) → S1 (UI) → S2 (model) → S5 (chisel leaves) → engine → S6 (cut).
 
 Code samples are illustrative unless marked implementation-ready.
 
@@ -221,6 +223,22 @@ either the Masonry `strophe` (until S6) or `strophe-serval` runnable.
 
 ## Progress
 
+- 2026-07-08: **S6 done — the `mark-ik/xilem` fork is retired family-wide.** With
+  the serval app at parity (UI + audio), the Masonry stack is deleted:
+  - **strophe** (`ddf5d65`): rm `crates/strophe` (the Masonry bin) +
+    `crates/strophe-widgets`; drop `xilem` / `masonry` / `masonry_winit` +
+    the cross-repo `audio-widgets` / `xilem-components` path-deps. Kept
+    `audio-primitives` (pure DSP, used by `strophe-engine`). Serval-only,
+    single wgpu 29 tree; a pre-existing `strophe-headless` `CapturePhase` match
+    was fixed forward.
+  - **woodshed** (`35ac0c0`): rm `crates/audio-widgets` + `crates/xilem-components`
+    (the fork's last consumers) + drop the fork deps. woodshed builds serval-only.
+  Verified: `grep -ri masonry` clean (bar historical comments) and both
+  workspaces build in one serval/wgpu-29 tree. **The plan's goal is met.**
+  Deferred to a spin-out: real per-layer peak data into the waveform leaves
+  (lift `compute_peaks` — it went with `strophe-widgets`), the Deeler
+  combination + settings surfaces, responsive waveform width, idle-tick
+  throttling, and cross-platform validation (iMac / Fedora / Mint).
 - 2026-07-08: **Audio engine wired — strophe-serval makes sound (parity with the
   Masonry app's core function).** `state.rs`'s `AppState` now owns a live
   `strophe_engine::Engine` + `InMemoryStore`, mirroring the Masonry app's glue:
