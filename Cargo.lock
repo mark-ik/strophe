@@ -5378,6 +5378,7 @@ dependencies = [
 name = "strophe-serval"
 version = "0.1.0"
 dependencies = [
+ "chisel",
  "layout-dom-api",
  "netrender",
  "paint_list_api",

@@ -10,6 +10,7 @@ description = "Strophe's serval desktop host: winit window + netrender present o
 [dependencies]
 strophe-model = { workspace = true }
 xilem-serval = { workspace = true }
+chisel = { workspace = true }
 layout-dom-api = { workspace = true }
 serval-scripted-dom = { workspace = true }
 serval-layout = { workspace = true }

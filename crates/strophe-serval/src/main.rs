@@ -7,6 +7,7 @@
 //! layer + theme live in [`view`] / [`theme`]; [`state`] holds the real
 //! `strophe_model::Session` + `History` the views derive from (S2).
 
+mod leaves;
 mod state;
 mod theme;
 mod view;
@@ -42,6 +43,11 @@ struct App {
     sheet: String,
     /// Cursor in logical coordinates.
     cursor: (f32, f32),
+    /// Host-owned chisel leaves (waveforms + meters), keyed by leaf key, plus
+    /// their rendered Path-A command cache. Reconciled from `AppState` each
+    /// frame; the retention gate keeps an unchanged leaf from repainting.
+    leaves: chisel::LeafRegistry<u64>,
+    rendered: chisel::RenderedLeaves,
 }
 
 impl App {
@@ -78,10 +84,34 @@ impl App {
                 }
             }
             let layout = self.layout.as_ref().expect("layout just ensured");
-            let list = layout.emit_paint_list(
+
+            // Chisel leaves: reconcile from the session, size each leaf from the
+            // laid-out `<chisel-leaf>` boxes, render the dirty ones, and splice
+            // their Path-A commands at their boxes.
+            leaves::reconcile(&mut self.leaves, runner.state());
+            let boxes = layout.chisel_leaf_boxes();
+            let size_map: std::collections::HashMap<u64, chisel::Size> = boxes
+                .iter()
+                .map(|(k, (w, h))| {
+                    (
+                        *k,
+                        chisel::Size {
+                            width: *w,
+                            height: *h,
+                        },
+                    )
+                })
+                .collect();
+            self.leaves
+                .render_into(|k| size_map.get(&k).copied(), &mut self.rendered);
+            self.rendered.retain_keys(|k| size_map.contains_key(&k));
+
+            let source = leaves::LeafSource(&self.rendered);
+            let list = layout.emit_paint_list_with_leaves(
                 &*dom_ref,
                 &ScrollOffsets::default(),
                 DeviceIntSize::new(lw as i32, lh as i32),
+                &source,
             );
             let translated = paint_list_render::translate_paint_cmd_stream(
                 list.viewport(),
@@ -211,6 +241,8 @@ fn main() {
         layout_size: (0.0, 0.0),
         sheet: theme::sheet(),
         cursor: (0.0, 0.0),
+        leaves: chisel::LeafRegistry::new(),
+        rendered: chisel::RenderedLeaves::new(),
     };
     event_loop.run_app(&mut app).expect("run app");
 }

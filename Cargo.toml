@@ -76,6 +76,7 @@ winit = "0.30"
 # checkouts ride the gitignored .cargo/config.toml source-specific [patch].
 # Build strophe-serval from the strophe cwd so that patch applies.
 xilem-serval = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
+chisel = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
 layout-dom-api = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
 serval-scripted-dom = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
 serval-layout = { git = "https://github.com/mark-ik/serval.git", branch = "main" }

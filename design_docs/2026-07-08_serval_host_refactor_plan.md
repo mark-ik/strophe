@@ -221,6 +221,26 @@ either the Masonry `strophe` (until S6) or `strophe-serval` runnable.
 
 ## Progress
 
+- 2026-07-08: **S5 done — the waveforms + meters are chisel leaves.** The signature
+  visual (each track's summed loop) is now a chisel Path-A leaf — a filled,
+  mirrored amplitude envelope, resolution-independent and tile-cached — replacing
+  the CSS-bar stand-in; the L/R output bars are chisel's built-in `Meter` leaf
+  (teal fill, amber peak). `leaves.rs`: a `WaveformLeaf` (`Leaf`: measure / paint
+  via `Path` + `fill_path` / paint_dirty), a key scheme (track index → wave key;
+  a small meter namespace), a `reconcile(registry, &AppState)` that ensures/updates
+  leaves from the session each frame (peaks lazily re-seeded only when a track's
+  audible-layer signature or colour moves, so the retention gate holds), and a
+  `LeafPaintSource` newtype forwarding `RenderedLeaves::get`. The host
+  (`main.rs`) owns a `LeafRegistry<u64>` + `RenderedLeaves`; redraw reconciles,
+  sizes leaves from `chisel_leaf_boxes()`, `render_into`s the dirty ones, and
+  emits via `emit_paint_list_with_leaves`. The view places `<chisel-leaf key=…>`
+  boxes. Per-layer mini-rows stay CSS bars (tiny; not worth a leaf each).
+  Verified headed: the filled envelopes render in owner colours; committing a
+  take (Guitar 3→4 layers) re-seeded its envelope (repaint-on-content-change);
+  the meters render. **strophe is the second real chisel consumer** (after
+  meerkat's grid/arrangement), exercising the leaf on-screen path end to end.
+  Follow-ups: fixed 280px width (responsive-fill later); real peak data lands
+  with the engine slice; per-layer rows could become leaves if wanted.
 - 2026-07-08: **S2 done — the UI runs on the real model.** `state.rs` introduces
   `AppState`: a `strophe_model::Session` + its `History`; every data-bearing
   gesture commits a real `Edit` (`ArmTrack`, `AppendLayer`, `SetLayerMute`,

@@ -9,9 +9,25 @@
 use strophe_model::{PlaybackMode, Track, TrackColor};
 use xilem_serval::{clickable, el, text, AnyView, ServalCtx, ServalElement};
 
+use crate::leaves::{wave_key, METER_L, METER_R};
 use crate::state::{AppState, OWNERS};
 
 pub type Child = Box<dyn AnyView<AppState, (), ServalCtx, ServalElement>>;
+
+/// A `<chisel-leaf>` block: carries only its key + box; the host renders the
+/// registered leaf's Path-A commands into it (see [`crate::leaves`]).
+fn chisel_leaf(key: u64, w: u32, h: u32) -> Child {
+    Box::new(
+        el("chisel-leaf", ())
+            .attr("key", key.to_string())
+            .attr("style", format!("display: block; width: {w}px; height: {h}px")),
+    )
+}
+
+/// The summed-loop waveform leaf for track `i`.
+fn wave_leaf(i: usize) -> Child {
+    chisel_leaf(wave_key(i), 280, 40)
+}
 
 fn hex(c: TrackColor) -> String {
     format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)
@@ -236,15 +252,14 @@ fn lane(state: &AppState, i: usize) -> Child {
                 )) as Child
             })
             .collect();
-        // The summed wave: seed from the whole stack so it changes as layers land.
-        let sum_seed = (0..n)
-            .filter(|&li| !track.layers[li].muted)
-            .fold(0x9e37u32, |acc, li| acc ^ layer_seed(track, li).rotate_left(li as u32));
         Box::new(
             el(
                 "div",
                 (
-                    el("div", bars(sum_seed, 30)).attr("class", "wave-summed"),
+                    // The summed loop is a chisel Path-A leaf (host-owned, keyed
+                    // by track); its filled envelope re-seeds when the audible
+                    // stack changes. See `leaves::reconcile`.
+                    wave_leaf(i),
                     el("div", layer_rows).attr("class", "layers"),
                 ),
             )
@@ -385,11 +400,24 @@ fn transport(state: &AppState) -> Child {
 }
 
 fn meter() -> Child {
+    // The L/R output bars are chisel `Meter` leaves (host-owned).
+    let col = |key: u64, label: &str| -> Child {
+        Box::new(
+            el(
+                "div",
+                (
+                    chisel_leaf(key, 10, 46),
+                    el("span", text(label.to_string())).attr("class", "mlbl mono"),
+                ),
+            )
+            .attr("class", "mcol"),
+        )
+    };
     Box::new(
         el(
             "div",
             (
-                el("div", (meter_col(0.72, "L"), meter_col(0.61, "R"))).attr("class", "mbars"),
+                el("div", (col(METER_L, "L"), col(METER_R, "R"))).attr("class", "mbars"),
                 el(
                     "div",
                     (
@@ -401,39 +429,5 @@ fn meter() -> Child {
             ),
         )
         .attr("class", "meter"),
-    )
-}
-
-fn meter_col(level: f32, label: &str) -> Child {
-    let total = 12usize;
-    let lit = (total as f32 * level).round() as usize;
-    let segs: Vec<Child> = (0..total)
-        .map(|i| {
-            let frac = i as f32 / total as f32;
-            let color = if frac > 0.86 {
-                "var(--record)"
-            } else if frac > 0.66 {
-                "var(--voice-amber)"
-            } else {
-                "var(--voice-teal)"
-            };
-            let opacity = if i < lit { "1" } else { "0.14" };
-            Box::new(
-                el("div", ()).attr("class", "mseg").attr(
-                    "style",
-                    format!("width: 12px; background-color: {color}; opacity: {opacity}"),
-                ),
-            ) as Child
-        })
-        .collect();
-    Box::new(
-        el(
-            "div",
-            (
-                el("div", segs).attr("class", "mbar-stack"),
-                el("span", text(label.to_string())).attr("class", "mlbl mono"),
-            ),
-        )
-        .attr("class", "mcol"),
     )
 }
