@@ -13,16 +13,18 @@ mod theme;
 mod view;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use layout_dom_api::{DomMutation, LayoutDomMut as _};
+use accesskit::{Action, NodeId as AccessNodeId, Tree, TreeId, TreeUpdate};
+use layout_dom_api::{DomMutation, LayoutDom as _, LayoutDomMut as _};
 use netrender::{ColorLoad, ExternalTexturePlacement, NetrenderOptions};
 use paint_list_api::{DeviceIntSize, PaintList as _};
 use serval_layout::{IncrementalLayout, ScrollOffsets};
 use serval_scripted_dom::{NodeId, ScriptedDom};
-use serval_winit_host::SurfaceHost;
+use serval_winit_host::{AccessKitBridge, BridgeStatus, SurfaceHost};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
@@ -53,10 +55,55 @@ struct App {
     /// frame; the retention gate keeps an unchanged leaf from repainting.
     leaves: chisel::LeafRegistry<u64>,
     rendered: chisel::RenderedLeaves,
+    /// OS accessibility bridge: the same laid-out DOM the frame renders is
+    /// projected to an AccessKit tree and pushed here, so a screen reader reads
+    /// Strophe's controls. `None` until the window exists.
+    a11y: Option<AccessKitBridge>,
+    /// Maps an actionable node's AccessKit id back to its DOM node, so a screen
+    /// reader's `Click` routes to the same `dispatch_click` path a mouse takes.
+    /// Rebuilt each frame the tree changes.
+    a11y_route: HashMap<AccessNodeId, NodeId>,
 }
 
 impl App {
+    /// Apply any screen-reader actions the OS queued since the last frame, routing
+    /// a `Click` to the same `dispatch_click` path a mouse press takes. The route
+    /// map is from the previous frame's tree, which is what the OS acted against.
+    fn pump_a11y_actions(&mut self) {
+        let requests = match self.a11y.as_mut() {
+            Some(bridge) => bridge.drain_actions(),
+            None => return,
+        };
+        if requests.is_empty() {
+            return;
+        }
+        let Some(runner) = self.runner.as_mut() else {
+            return;
+        };
+        let mut acted = false;
+        for req in requests {
+            if req.action == Action::Click {
+                if let Some(&node) = self.a11y_route.get(&req.target_node) {
+                    runner.dispatch_click(
+                        node,
+                        PointerClick {
+                            local: (0.0, 0.0),
+                            prop: Propagation::new(),
+                        },
+                    );
+                    acted = true;
+                }
+            }
+        }
+        if acted {
+            if let Some(window) = self.window.as_ref() {
+                window.request_redraw();
+            }
+        }
+    }
+
     fn redraw(&mut self) {
+        self.pump_a11y_actions();
         let (Some(window), Some(host), Some(runner)) =
             (self.window.as_ref(), self.host.as_ref(), self.runner.as_ref())
         else {
@@ -124,6 +171,47 @@ impl App {
                 list.fonts(),
                 list.images(),
             );
+
+            // Accessibility: project the same laid-out DOM this frame rendered into
+            // an AccessKit tree and push it to the OS bridge, rebuilding only when
+            // the DOM or size changed (or the adapter isn't installed yet). Strophe
+            // is a single serval surface, so it skips nothing and salts nothing —
+            // the engine's opaque ids are the AccessKit ids. `build_subtree` hands
+            // back the actionable nodes; we remember them so a screen reader's
+            // request routes back to the view's click path.
+            if let Some(bridge) = self.a11y.as_mut() {
+                let needs_tree = structural
+                    || size_changed
+                    || !muts.is_empty()
+                    || bridge.status() == BridgeStatus::Unavailable;
+                if needs_tree {
+                    let (nodes, root_id, actionable) = serval_layout::build_subtree(
+                        &*dom_ref,
+                        layout.fragments(),
+                        dom_ref.document(),
+                        &|d: &ScriptedDom, n: NodeId| AccessNodeId(d.opaque_id(n)),
+                        &|_d: &ScriptedDom, _n: NodeId| false,
+                    );
+                    self.a11y_route = actionable
+                        .iter()
+                        .map(|&n| (AccessNodeId(dom_ref.opaque_id(n)), n))
+                        .collect();
+                    let tree = TreeUpdate {
+                        nodes,
+                        tree: Some(Tree::new(root_id)),
+                        tree_id: TreeId::ROOT,
+                        focus: root_id,
+                    };
+                    match bridge.status() {
+                        BridgeStatus::Installed => bridge.update(tree),
+                        // Best-effort: a platform with no adapter just goes without.
+                        BridgeStatus::Unavailable => {
+                            let _ = bridge.install(window, tree);
+                        }
+                    }
+                }
+            }
+
             translated.scene
         };
 
@@ -204,6 +292,11 @@ impl ApplicationHandler for App {
         .expect("boot serval host");
         let dom = Rc::new(RefCell::new(ScriptedDom::new()));
         let runner = Runner::new(dom, root as fn(&AppState) -> Child, AppState::demo());
+        // AccessKit bridge: a screen-reader action wakes the loop so the next
+        // frame drains and routes it. Installed lazily on the first frame with a
+        // laid-out tree (see `redraw`).
+        let wake_window = window.clone();
+        self.a11y = Some(AccessKitBridge::new(move || wake_window.request_redraw()));
         self.window = Some(window);
         self.host = Some(host);
         self.runner = Some(runner);
@@ -265,6 +358,8 @@ fn main() {
         cursor: (0.0, 0.0),
         leaves: chisel::LeafRegistry::new(),
         rendered: chisel::RenderedLeaves::new(),
+        a11y: None,
+        a11y_route: HashMap::new(),
     };
     event_loop.run_app(&mut app).expect("run app");
 }

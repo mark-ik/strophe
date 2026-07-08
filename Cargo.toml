@@ -17,6 +17,9 @@ repository = "https://github.com/mark-ik/strophe"
 rust-version = "1.92"
 
 [workspace.dependencies]
+# AccessKit tree/action types for the serval host's a11y bridge (must track
+# serval's accesskit pin so `TreeUpdate` unifies across serval-winit-host).
+accesskit = "0.24"
 # Internal crates. The `strophe` (app) and `strophe-headless` (audio
 # test harness) binaries are workspace members but not dependency
 # targets, so they don't appear here.

@@ -8,6 +8,8 @@ repository.workspace = true
 description = "Strophe's serval desktop host: winit window + netrender present over the serval view layer. Serval-host refactor S0+."
 
 [dependencies]
+# AccessKit tree/action types for the a11y bridge (serval_winit_host::AccessKitBridge).
+accesskit = { workspace = true }
 strophe-model = { workspace = true }
 strophe-engine = { workspace = true }
 xilem-serval = { workspace = true }
