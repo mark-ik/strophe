@@ -221,6 +221,26 @@ either the Masonry `strophe` (until S6) or `strophe-serval` runnable.
 
 ## Progress
 
+- 2026-07-08: **S2 done — the UI runs on the real model.** `state.rs` introduces
+  `AppState`: a `strophe_model::Session` + its `History`; every data-bearing
+  gesture commits a real `Edit` (`ArmTrack`, `AppendLayer`, `SetLayerMute`,
+  `MuteTrack`, `SetBpm`, `SetMasterClock`), so undo/redo and the future sync
+  layer see exactly what the UI did. The demo session is seeded through the same
+  commits (renames, colours, layers), not hand-built structs. `view.rs` derives
+  everything from the session: lane names/colours/stacks, the tracks chip, tempo
+  (now the model's 120 default), meter, the record label (armed track's name),
+  toggle states. Waveform stand-ins seed per layer from its `PhraseId`, so shapes
+  are stable per take; the summed wave excludes muted layers. App-local (marked
+  in `state.rs` with graduation notes): the live-capture flag (stopping commits
+  an `AppendLayer` with placeholder media until the engine slice), the audible
+  click, and solo (no model backing yet). Rail peers stay placeholder until sync.
+  Verified by driving the running app (PostMessage to strophe's own hwnd —
+  targeted client-coordinate clicks, cannot touch other windows): record stop
+  appended L4 to Guitar; tempo stepped 120→124; arming Bass mid-capture stopped
+  and committed the Guitar take and moved the arm (teal border followed); a layer
+  tap dimmed L1 and recomputed the summed wave. Inert until their slices: solo
+  audibility, stop button, add-track (no `AddTrack` edit in the model yet),
+  hand-off.
 - 2026-07-08: **Two of the S1 quirks were serval bugs — fixed upstream**
   (serval `dab0ee5`, regression tests included, 267-test suite green):
   - `:root` now matches the root element (`is_root` tested `parent().is_none()`,

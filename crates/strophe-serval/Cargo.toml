@@ -8,6 +8,7 @@ repository.workspace = true
 description = "Strophe's serval desktop host: winit window + netrender present over the serval view layer. Serval-host refactor S0+."
 
 [dependencies]
+strophe-model = { workspace = true }
 xilem-serval = { workspace = true }
 layout-dom-api = { workspace = true }
 serval-scripted-dom = { workspace = true }

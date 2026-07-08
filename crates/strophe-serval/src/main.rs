@@ -4,8 +4,10 @@
 //! the views into a `ScriptedDom`, a retained `IncrementalLayout` lays it
 //! out, the paint list lowers to a `netrender::Scene`, and
 //! `serval-winit-host`'s `SurfaceHost` rasterizes and composites. The view
-//! layer + theme live in [`view`] / [`theme`]; S2 wires them to `AppState`.
+//! layer + theme live in [`view`] / [`theme`]; [`state`] holds the real
+//! `strophe_model::Session` + `History` the views derive from (S2).
 
+mod state;
 mod theme;
 mod view;
 
@@ -25,9 +27,10 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 use xilem_serval::{PointerClick, Propagation, ServalAppRunner};
 
-use view::{root, Child, Ui};
+use state::AppState;
+use view::{root, Child};
 
-type Runner = ServalAppRunner<Ui, fn(&Ui) -> Child, Child>;
+type Runner = ServalAppRunner<AppState, fn(&AppState) -> Child, Child>;
 
 struct App {
     window: Option<Arc<Window>>,
@@ -165,7 +168,7 @@ impl ApplicationHandler for App {
         )
         .expect("boot serval host");
         let dom = Rc::new(RefCell::new(ScriptedDom::new()));
-        let runner = Runner::new(dom, root as fn(&Ui) -> Child, Ui::default());
+        let runner = Runner::new(dom, root as fn(&AppState) -> Child, AppState::demo());
         self.window = Some(window);
         self.host = Some(host);
         self.runner = Some(runner);
