@@ -2,15 +2,15 @@
 //!
 //! One screen: the pass-the-mic circle | the loop table | the transport.
 //! Everything data-bearing derives from [`AppState`]'s `Session`; gestures
-//! call the `AppState` methods, which commit real `Edit`s. The rail's peers
-//! are placeholders until the sync layer. The waveform + meter are DOM
-//! stand-ins; S5 makes them chisel leaves.
+//! call the `AppState` methods, which commit real `Edit`s. The rail currently
+//! shows the local performer only; peers arrive with the sync layer. Waveform
+//! and meter drawing use host-owned chisel leaves.
 
 use strophe_model::{PlaybackMode, Track, TrackColor};
 use xilem_serval::{clickable, el, text, AnyView, ServalCtx, ServalElement};
 
 use crate::leaves::{wave_key, METER_L, METER_R};
-use crate::state::{AppState, OWNERS};
+use crate::state::AppState;
 
 pub type Child = Box<dyn AnyView<AppState, (), ServalCtx, ServalElement>>;
 
@@ -78,6 +78,7 @@ fn top(state: &AppState) -> Child {
         PlaybackMode::SelectOne { .. } => "deeler",
     };
     let chip = format!("{} tracks \u{00b7} {}", state.session.tracks.len(), profile);
+    let status = state.project_status_label();
     Box::new(
         el(
             "div",
@@ -90,10 +91,24 @@ fn top(state: &AppState) -> Child {
                     ),
                 )
                 .attr("class", "brand"),
-                el("span", text("\"back porch, take 3\"")).attr("class", "session-name mono"),
+                el("span", text(state.project_label())).attr("class", "session-name mono"),
+                el("span", text(status)).attr("class", "project-status mono"),
                 el("div", ()).attr("class", "top-spacer"),
                 el("span", text(chip)).attr("class", "chip mono"),
-                el("div", text("\u{2699}")).attr("class", "cog"),
+                clickable(
+                    el("div", text("Open"))
+                        .attr("class", "project-command")
+                        .attr("role", "button")
+                        .attr("aria-label", "Open project"),
+                    |state: &mut AppState, _| state.choose_project_to_open(),
+                ),
+                clickable(
+                    el("div", text("Save"))
+                        .attr("class", "project-command project-save")
+                        .attr("role", "button")
+                        .attr("aria-label", "Save project"),
+                    |state: &mut AppState, _| state.choose_project_to_save(),
+                ),
             ),
         )
         .attr("class", "top"),
@@ -128,8 +143,7 @@ fn peer(name: &str, initials: &str, voice: &str, sub: &str, turn: bool) -> Child
     Box::new(el("div", kids).attr("class", cls))
 }
 
-/// The pass-the-mic rail. Peers are placeholder data until the sync layer;
-/// "You" reflects the live arm/record state.
+/// The pass-the-mic rail shows the local performer until sharing exists.
 fn rail(state: &AppState) -> Child {
     let you_sub = if state.is_recording() {
         "your turn \u{00b7} recording"
@@ -137,20 +151,15 @@ fn rail(state: &AppState) -> Child {
         "your turn"
     };
     let amber = "#e0a64b";
+    let session_note = if state.missing_media.is_empty() {
+        "local session".to_string()
+    } else {
+        format!("{} media blob(s) unavailable", state.missing_media.len())
+    };
     let kids: Vec<Child> = vec![
         Box::new(el("div", text("the circle")).attr("class", "eyebrow")),
         peer("You", "YU", amber, you_sub, true),
-        peer("Jonah", "JD", "#56b3a8", "laid down bass", false),
-        peer("Mara", "MR", "#e0796a", "waiting", false),
-        peer("Eli", "EL", "#a9b96b", "waiting", false),
-        Box::new(el("div", ()).attr("class", "rail-spacer")),
-        Box::new(clickable(
-            el("div", text("Hand off \u{2192}"))
-                .attr("class", "handoff")
-                .attr("role", "button"),
-            |_state: &mut AppState, _| {},
-        )),
-        Box::new(el("div", text("passes the mic to Jonah")).attr("class", "handoff-note")),
+        Box::new(el("div", text(session_note)).attr("class", "handoff-note")),
     ];
     Box::new(el("div", kids).attr("class", "rail"))
 }
@@ -174,7 +183,7 @@ fn table(state: &AppState) -> Child {
         el("div", text("+ add track"))
             .attr("class", "add-track")
             .attr("role", "button"),
-        |_state: &mut AppState, _| {},
+        |state: &mut AppState, _| state.add_track(),
     )));
     Box::new(el("div", kids).attr("class", "table"))
 }
@@ -189,7 +198,7 @@ fn lane(state: &AppState, i: usize) -> Child {
         cls.push_str(" lane-armed");
     }
     let style = format!("--voice: {}", hex(track.color));
-    let owner = OWNERS.get(i).copied().unwrap_or("you");
+    let owner = "you";
     let n = track.layers.len();
 
     let id = el(
@@ -305,7 +314,6 @@ fn lane(state: &AppState, i: usize) -> Child {
                     .attr("aria-label", format!("Solo {}", track.name)),
                 move |state: &mut AppState, _| state.toggle_solo(i),
             ),
-            el("div", text("\u{21bb}")).attr("class", "lctl"),
         ),
     )
     .attr("class", "lane-ctl");
@@ -434,7 +442,16 @@ fn transport(state: &AppState) -> Child {
         "div",
         el(
             "div",
-            (el("div", text("\u{25a0}")).attr("class", "stop"), meter()),
+            (
+                clickable(
+                    el("div", text("\u{25a0}"))
+                        .attr("class", "stop")
+                        .attr("role", "button")
+                        .attr("aria-label", "Stop all loops"),
+                    |state: &mut AppState, _| state.stop_all(),
+                ),
+                meter(state),
+            ),
         )
         .attr("class", "t-right-inner"),
     )
@@ -443,7 +460,7 @@ fn transport(state: &AppState) -> Child {
     Box::new(el("div", (left, center, right)).attr("class", "transport"))
 }
 
-fn meter() -> Child {
+fn meter(state: &AppState) -> Child {
     // The L/R output bars are chisel `Meter` leaves (host-owned).
     let col = |key: u64, label: &str| -> Child {
         Box::new(
@@ -457,6 +474,12 @@ fn meter() -> Child {
             .attr("class", "mcol"),
         )
     };
+    let peak = state.meter_db(0).max(state.meter_db(1));
+    let peak_text = if peak.is_finite() {
+        format!("{peak:.1} dB")
+    } else {
+        "-- dB".to_string()
+    };
     Box::new(
         el(
             "div",
@@ -466,7 +489,7 @@ fn meter() -> Child {
                     "div",
                     (
                         el("div", text("out")).attr("class", "eyebrow"),
-                        el("div", text("\u{2212}4.2 dB")).attr("class", "mpeak mono"),
+                        el("div", text(peak_text)).attr("class", "mpeak mono"),
                     ),
                 )
                 .attr("class", "readout"),

@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use crate::ids::{NodeId, TrackId};
 use crate::phrase::{Layer, Phrase};
 use crate::session::{Session, TimeSignature};
-use crate::track::{PlaybackMode, TrackColor};
+use crate::track::{PlaybackMode, Track, TrackColor};
 
 /// A single recorded edit. Carries its own inversion data.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -40,6 +40,10 @@ pub enum Edit {
     SetBarsPerPhrase { from: u8, to: u8 },
     SetMasterClock { from: bool, to: bool },
     SetCountInBars { from: u8, to: u8 },
+
+    /// Append a new empty track. Track creation is an edit because the track
+    /// list is shared session structure, not host-local presentation state.
+    AddTrack { track: Track },
 
     RenameTrack {
         track_id: TrackId,
@@ -117,6 +121,7 @@ impl Edit {
             Edit::SetBarsPerPhrase { to, .. } => session.bars_per_phrase = *to,
             Edit::SetMasterClock { to, .. } => session.master_clock_enabled = *to,
             Edit::SetCountInBars { to, .. } => session.count_in_bars = *to,
+            Edit::AddTrack { track } => session.tracks.push(track.clone()),
             Edit::RenameTrack { track_id, to, .. } => {
                 if let Some(t) = session.track_mut(*track_id) {
                     t.name = to.clone();
@@ -196,6 +201,11 @@ impl Edit {
             Edit::SetBarsPerPhrase { from, .. } => session.bars_per_phrase = *from,
             Edit::SetMasterClock { from, .. } => session.master_clock_enabled = *from,
             Edit::SetCountInBars { from, .. } => session.count_in_bars = *from,
+            Edit::AddTrack { track } => {
+                if let Some(index) = session.tracks.iter().rposition(|t| t.id == track.id) {
+                    session.tracks.remove(index);
+                }
+            }
             Edit::RenameTrack { track_id, from, .. } => {
                 if let Some(t) = session.track_mut(*track_id) {
                     t.name = from.clone();
@@ -739,6 +749,30 @@ mod tests {
             s.tracks[0].playback_mode,
             PlaybackMode::SelectOne { active: None }
         );
+    }
+
+    #[test]
+    fn add_track_round_trip() {
+        let mut s = Session::new_default();
+        let mut h = History::new();
+        let track = Track::new_with_mode(
+            "track 5",
+            TrackColor::from_palette_index(4),
+            s.default_playback_mode,
+        );
+        let id = track.id;
+
+        let added = h.commit(Edit::AddTrack { track }, &mut s, 0);
+        assert_eq!(s.tracks.len(), 5);
+        assert_eq!(s.tracks.last().map(|t| t.id), Some(id));
+
+        h.checkout(h.root, &mut s).unwrap();
+        assert_eq!(s.tracks.len(), 4);
+        assert!(s.track(id).is_none());
+
+        h.checkout(added, &mut s).unwrap();
+        assert_eq!(s.tracks.len(), 5);
+        assert_eq!(s.tracks.last().map(|t| t.id), Some(id));
     }
 
     #[test]

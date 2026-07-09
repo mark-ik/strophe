@@ -28,12 +28,16 @@ pub fn sheet() -> String {
 .brand { font-size: 17px; color: var(--text); }
 .brand-dot { color: var(--voice-amber); }
 .session-name { color: var(--text-dim); font-size: 13px; padding-left: 14px; }
+.project-status { color: var(--text-faint); font-size: 11px; padding-left: 10px; max-width: 220px;
+                  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .top-spacer { flex-grow: 1; }
 .chip { background-color: var(--surface); border: 1px solid var(--line-soft); color: var(--text-dim);
         font-size: 12px; padding: 5px 11px; border-radius: 14px; margin-right: 12px; }
-.cog { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line-soft);
-       background-color: var(--surface); color: var(--text-dim); text-align: center; line-height: 30px; }
-.cog:hover { color: var(--text); border-color: var(--line); }
+.project-command { height: 30px; border-radius: 7px; border: 1px solid var(--line-soft);
+                   background-color: var(--surface); color: var(--text-dim); font-size: 12px;
+                   line-height: 30px; padding: 0 10px; margin-left: 7px; }
+.project-command:hover { color: var(--text); border-color: var(--line); }
+.project-save { color: var(--voice-teal); }
 
 /* middle row: rail + table. `min-height: 0` overrides flexbox's default
    `min-height: auto` so `.body` can shrink below its lanes' min-content and

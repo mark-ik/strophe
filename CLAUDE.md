@@ -1,80 +1,51 @@
-# CLAUDE.md — Strophe Repository Role
+# Strophe Repository Guide
 
-This file defines how Claude Code should behave in this repository. Read
-it first when starting any session.
+## Product
 
----
+Strophe is a cross-platform loop recorder with asynchronous turn-taking. The
+core musical gesture is adding a layer to a short loop, then handing a session
+to another person when sharing is available. It is not an Ableton-shaped DAW
+and it is not a real-time network jam tool.
 
-## Project Identity
+The default looper-pedal profile starts with four tracks whose unmuted layers
+sum. The named Deeler profile starts with ten tracks and selects one active
+layer per track. Counts and capture settings are stored in the session so they
+remain configurable.
 
-**Strophe** is a cross-platform loop recorder with turn-based
-collaboration, inspired by Menomena's Deeler. Sibling to
-[Woodshed](../woodshed/); shares audio infrastructure via path-dep on
-woodshed's `woodshed-audio` crate.
+`design_docs/PROJECT_DESCRIPTION.md` is maintainer-owned product authority.
+Read `design_docs/DOC_README.md` before planning or changing subsystem scope.
 
-The north-star metaphor (from `PROJECT_DESCRIPTION.md`): *the digital
-equivalent of passing a mic around in a circle and building loops
-turn by turn.* Asynchronous, sequential, no shared clock, no real-time
-jam pressure.
-
-The product is not an Ableton-shaped DAW. It's a Tracks-of-Phrases
-phrase sampler — **ten tracks × four variations as defaults, both
-configurable** — with sequential async overdubbing, content-addressed
-media, nondestructive history, and peer-to-peer session sync as the
-collaboration model. Configurability is in the model from day one;
-parity-with-Deeler is the initial target, with broader configuration
-following. See `design_docs/PROJECT_DESCRIPTION.md` for the product
-description and `design_docs/DOC_README.md` for the doc index.
-
-## Document Structure
-
-All authoritative design material lives in `design_docs/`. Read
-`design_docs/DOC_README.md` first.
-
-| Path | What's there |
-|------|-------------|
-| `design_docs/DOC_README.md` | Index and AI working principles |
-| `design_docs/DOC_POLICY.md` | Documentation governance |
-| `design_docs/PROJECT_DESCRIPTION.md` | Product goals, features (maintainer-owned) |
-| `design_docs/<date>_<keyword>_plan.md` | Active feature plans |
-| `design_docs/archive_docs/<date>/` | Retired plans |
-
-## Workspace Layout
+## Workspace
 
 ```
 crates/
-  strophe/           The Xilem application (the binary users run)
-  strophe-engine/    Audio engine (Firewheel)
-  strophe-model/     Session data model (nondestructive)
-  strophe-widgets/   Masonry custom widgets
-  strophe-headless/  Headless audio-engine test harness (scripted demos)
+  strophe-model/     Session and history authority; framework independent
+  strophe-engine/    Firewheel capture, playback, click, and media abstraction
+  strophe-headless/  Scripted audio-engine harness
+  strophe-serval/    Serval/winit application host and recorder UI
 ```
 
-`cargo run -p strophe` launches the app; `cargo run -p strophe-headless`
-runs the scripted audio demo without a UI.
+Run the desktop application with `cargo run -p strophe-serval`. The retired
+Masonry application and `strophe-widgets` crate are not part of this workspace.
 
-Sibling: `../woodshed/crates/woodshed-audio` (path-dep). Eventually
-`woodshed-audio` may be pulled apart into per-module crates; today it's
-consumed as the umbrella.
+The sibling `../woodshed/crates/audio-primitives` path dependency provides
+shared pure DSP helpers. Do not couple Strophe to a Woodshed application crate.
 
-## General Guidelines
+## Boundaries
 
-- Rust: standard idioms. No `unsafe` without documented justification.
-- The model crate (`strophe-model`) must remain framework-agnostic — no
-  cpal, no xilem, no masonry. The audio engine and the UI both consume
-  it.
-- Plans go in `design_docs/` per the date-keyword-plan convention. Do
-  not store project plans in `.claude/plans/`.
-- Follow `DOC_POLICY.md` for documentation changes.
+- Keep `strophe-model` independent of UI and audio frameworks. Session edits
+  that must survive undo or synchronization belong in `Edit` and `History`.
+- Keep `strophe-engine` as a runtime projection. It can own real-time graph and
+  device concerns, but not authoritative session state.
+- Keep `strophe-serval` thin. Host-local presentation state is acceptable;
+  session, media, and collaboration semantics are not.
+- Build local durability before peer synchronization: a peer cannot reliably
+  import or share a session that the originating host cannot reopen.
+- Do not add plugin hosting or an arrange view while the loop recorder, export,
+  and hand-off flows are incomplete.
 
-## Important Don'ts
+## Documentation
 
-- Do not build an Ableton-shaped feature set. The constraint set is
-  deliberate; widening it would erase the project's identity.
-- Do not couple `strophe-model` to any UI or audio framework.
-- Do not add real-time multiplayer ("everyone jams together over the
-  network") as a primary mode. The collaboration model is *asynchronous*
-  — sequential turn-taking with explicit hand-offs. Real-time presence
-  is at most a side-channel awareness feature.
-- Do not extract `woodshed-audio` into per-module crates speculatively.
-  Wait for actual consumer pain across both projects.
+Follow `design_docs/DOC_POLICY.md`. Non-trivial work gets a dated plan in
+`design_docs/`, whose progress reflects the live code and verification state.
+Do not edit `PROJECT_DESCRIPTION.md` without explicit maintainer direction.

@@ -20,6 +20,17 @@ before any other doc in this directory.
   `strophe_engine` spine wired in. The Masonry app + the `mark-ik/xilem` fork
   are deleted family-wide (strophe + woodshed). Deferred follow-ups listed in
   the plan's Progress log.
+- [2026-07-09_honest-local-session_plan.md](2026-07-09_honest-local-session_plan.md)
+  - **LANDED.** Empty-session startup, history-backed track creation, real
+  solo/stop behavior, and removal of collaboration/demo affordances that had
+  no backing subsystem. Persistence and sync remain separately scoped.
+- [2026-07-09_muniment-project-store_plan.md](2026-07-09_muniment-project-store_plan.md)
+  - **LANDED.** Local project persistence over Muniment's generic backend seam,
+  with a Serval-host Redb API. The manifest retains Strophe's session/history
+  semantics and media keeps its existing `MediaRef` identity.
+- [2026-07-09_project-controls_plan.md](2026-07-09_project-controls_plan.md)
+  - Native desktop open/save controls over the Muniment store, with Armillary
+  moving Redb work off the Serval kernel thread.
 
 ## Archive
 
@@ -34,13 +45,10 @@ section whenever a durable working insight emerges from a session.
 - **The model is framework-agnostic.** `strophe-model` does not depend
   on cpal, xilem, masonry, or any UI/audio framework. The audio
   engine, the UI, and the sync layer all consume it as a peer.
-- **The UI rides serval, not Masonry (from 2026-07-08).** The plan is to
-  refactor the UI onto `xilem_serval` (serval's `xilem_core` backend, the
-  host woodshed already uses) with the custom-paint widgets
-  (waveform / meter / fader / knob) reborn as `chisel` leaves, retiring the
-  `mark-ik/xilem` Masonry fork. Structure (buttons, labels, flex, surface
-  switches) is native serval views + tinct CSS; only the drawn widgets are
-  chisel leaves. The audio spine is untouched. See
+- **The UI rides Serval, not Masonry (from 2026-07-08).** The active host is
+  `xilem_serval` with `chisel` leaves for waveform and meter drawing. Structure
+  is native Serval views plus tinct CSS. The Masonry application and fork were
+  retired; the audio spine remains independent. See
   [2026-07-08_serval_host_refactor_plan.md](2026-07-08_serval_host_refactor_plan.md).
 - **Async-first collaboration**, never real-time multiplayer jamming.
   The product's identity is sequential turn-taking over Moothold; that
@@ -51,13 +59,10 @@ section whenever a durable working insight emerges from a session.
   musician keep their hands on the instrument. Big buttons, minimal
   modes, count-in countdowns, no clicking-around-to-arm-a-track
   ceremonies.
-- **Defaults, not limits.** Ten tracks, four variations, four-bar
-  phrase length, click-driven recording — these are *defaults* per
-  `PROJECT_DESCRIPTION.md`'s configurability framing. Initial target
-  is parity with Deeler; the model should be shaped so widening the
-  parameters later (12 tracks, 8 variations, different phrase
-  lengths) is a session-config change, not a refactor. Use `Vec`
-  and runtime-known counts in the model — never `[T; 10]`.
+- **Defaults, not limits.** The looper-pedal default is four tracks with
+  layered overdub. Deeler is a named ten-track, SelectOne profile. Track count,
+  phrase length, capture settings, and playback mode remain session settings;
+  use `Vec` and runtime-known counts in the model.
 - **"Pass the mic" is the north-star metaphor.** The collaboration
   model is the digital equivalent of passing a mic around in a circle
   and building loops turn by turn. UI and protocol decisions should
@@ -86,14 +91,14 @@ section whenever a durable working insight emerges from a session.
   nodes with schema-driven UI generated from parameter metadata.
   Drags DAW-shaped product gravity if we say yes; preserves
   loop-recorder identity if we say no. v1 says no.
-- **Layered tracks, not variation slots.** A track is a stack of
-  layers (each layer = one captured sample). Variations as a separate
-  concept do not exist; multiple takes are muteable layers.
+- **Layers are primary.** A track is an append-only stack of captured layers.
+  Looper sessions sum unmuted layers; the Deeler profile selects one existing
+  layer. Do not introduce a second variation-slot data structure.
 - **Local-only transport for v1.** Each peer has its own playback
   head. Recording lock prevents two peers from capturing into the
-  same track on the same turn; CRDTs apply to session structure
-  (track existence, turn ownership, mute/solo, locked BPM), never to
-  audio data.
+  same track on the same turn; CRDTs apply to shared session structure
+  (track existence, turn ownership, mute, locked BPM), never to audio
+  data. Solo is local monitoring state.
 
 ## Reference reading
 
@@ -118,9 +123,9 @@ Hand-picked technical references that inform Strophe's architecture:
 **Architecture references:**
 - [Firewheel design doc](https://github.com/BillyDM/Firewheel/blob/main/DESIGN_DOC.md)
 - [CLAP spec](https://github.com/free-audio/clap) — headers themselves are the spec
-- **Share with Woodshed, don't fork.** The `woodshed-audio` crate is
-  consumed as-is via path-dep. Extraction into per-module crates is
-  deferred until consumer pain across both projects justifies it.
+- **Share with Woodshed, don't fork.** Strophe consumes focused shared crates
+  such as `audio-primitives` via path dependency. Keep application-level
+  dependencies one-way and extract further only when both projects need them.
 - **Strophos family naming.** Crates use `strophe-*`. The bare
   `strophe` crate name on crates.io is squatted by a dead 2016 redirect;
   this is acceptable because distribution is via itch.io/Gumroad and

@@ -192,3 +192,20 @@ impl LeafPaintSource for LeafSource<'_> {
         self.0.get(key)
     }
 }
+
+// --- LeafA11ySource adapter --------------------------------------------
+
+/// Forwards serval-layout's a11y walk to each leaf's own `accessibility()`.
+/// serval-layout knows `<chisel-leaf>` as an element but not chisel's types, so
+/// the host bridges: the output meters announce as meters carrying their level,
+/// and any leaf that declares an action becomes routable like a DOM control.
+/// A newtype for the same orphan-rule reason as [`LeafSource`].
+pub struct LeafA11y<'a>(pub &'a mut LeafRegistry<u64>);
+
+impl serval_layout::LeafA11ySource for LeafA11y<'_> {
+    fn describe_leaf(&mut self, key: u64, node: &mut accesskit::Node) {
+        if let Some(leaf) = self.0.get_mut(&key) {
+            leaf.accessibility(node);
+        }
+    }
+}

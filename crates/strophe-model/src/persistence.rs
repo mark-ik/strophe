@@ -27,6 +27,9 @@ use crate::session::Session;
 /// (e.g. via Moothold blob storage).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ProjectBundle {
+    /// Schema version for the manifest payload. A future incompatible schema
+    /// gets a new version rather than being decoded under false assumptions.
+    pub format_version: u16,
     pub session: Session,
     pub history: History,
 }
@@ -35,6 +38,7 @@ pub struct ProjectBundle {
 pub enum PersistenceError {
     Encode(postcard::Error),
     Decode(postcard::Error),
+    UnsupportedVersion(u16),
 }
 
 impl std::fmt::Display for PersistenceError {
@@ -42,6 +46,9 @@ impl std::fmt::Display for PersistenceError {
         match self {
             Self::Encode(e) => write!(f, "encode failed: {e}"),
             Self::Decode(e) => write!(f, "decode failed: {e}"),
+            Self::UnsupportedVersion(version) => {
+                write!(f, "unsupported project format version {version}")
+            }
         }
     }
 }
@@ -49,6 +56,17 @@ impl std::fmt::Display for PersistenceError {
 impl std::error::Error for PersistenceError {}
 
 impl ProjectBundle {
+    /// Current serialized project-manifest schema.
+    pub const FORMAT_VERSION: u16 = 1;
+
+    pub fn new(session: Session, history: History) -> Self {
+        Self {
+            format_version: Self::FORMAT_VERSION,
+            session,
+            history,
+        }
+    }
+
     /// Encode to postcard bytes. Deterministic given equal input
     /// because all collections are `BTreeMap`.
     pub fn to_bytes(&self) -> Result<Vec<u8>, PersistenceError> {
@@ -57,7 +75,11 @@ impl ProjectBundle {
 
     /// Decode from postcard bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, PersistenceError> {
-        postcard::from_bytes(bytes).map_err(PersistenceError::Decode)
+        let bundle: Self = postcard::from_bytes(bytes).map_err(PersistenceError::Decode)?;
+        if bundle.format_version != Self::FORMAT_VERSION {
+            return Err(PersistenceError::UnsupportedVersion(bundle.format_version));
+        }
+        Ok(bundle)
     }
 }
 
@@ -98,10 +120,7 @@ mod tests {
             }
         }
 
-        let bundle = ProjectBundle {
-            session: session.clone(),
-            history: history.clone(),
-        };
+        let bundle = ProjectBundle::new(session.clone(), history.clone());
         let bytes = bundle.to_bytes().unwrap();
         let restored = ProjectBundle::from_bytes(&bytes).unwrap();
 
@@ -117,11 +136,19 @@ mod tests {
     fn encoding_is_deterministic_for_equal_input() {
         let session = Session::new_default();
         let history = History::new();
-        let b1 = ProjectBundle {
-            session: session.clone(),
-            history: history.clone(),
-        };
-        let b2 = ProjectBundle { session, history };
+        let b1 = ProjectBundle::new(session.clone(), history.clone());
+        let b2 = ProjectBundle::new(session, history);
         assert_eq!(b1.to_bytes().unwrap(), b2.to_bytes().unwrap());
+    }
+
+    #[test]
+    fn rejects_unknown_format_version() {
+        let mut bundle = ProjectBundle::new(Session::new_default(), History::new());
+        bundle.format_version += 1;
+        let bytes = postcard::to_allocvec(&bundle).unwrap();
+        assert_eq!(
+            ProjectBundle::from_bytes(&bytes).unwrap_err().to_string(),
+            "unsupported project format version 2"
+        );
     }
 }

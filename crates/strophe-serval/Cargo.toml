@@ -23,3 +23,10 @@ paint_list_api = { workspace = true }
 paint_list_render = { workspace = true }
 wgpu = { workspace = true }
 winit = { workspace = true }
+muniment = { workspace = true, features = ["redb"] }
+armillary = { workspace = true }
+pollster = "0.4"
+rfd = "0.17.2"
+
+[dev-dependencies]
+tempfile = "3"

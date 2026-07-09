@@ -3,28 +3,33 @@
 //!
 //! Every data-bearing gesture commits a real `Edit`, so undo/redo + the future
 //! sync layer see exactly what the UI did; the engine-driving methods mirror the
-//! Masonry app's (`record` / `arm` / `stop_all` / `play_layer_from_store` / …)
-//! so audio behaviour is a fixed reference across the two hosts. The `Engine` is
+//! host's (`record` / `arm` / `stop_all` / `play_layer_from_store` / …)
+//! so audio behaviour remains independent of the UI framework. The `Engine` is
 //! `!Send`; winit runs the app on the main thread, so it lives directly here and
 //! is advanced by [`tick`](AppState::tick) from the host's ~60fps timer.
-//!
-//! Demo note: the initial session is seeded with silent placeholder layers
-//! (`MediaRef::ZERO`) for the approved populated look — they render but do not
-//! play. A real Record captures audio, appends a playable layer, and loops it.
 
 use std::collections::BTreeSet;
+use std::path::PathBuf;
 
+use armillary::ActorHandle;
 use strophe_engine::media::{InMemoryStore, MediaStore};
 use strophe_engine::{CapturePhase, Engine, LayerKey};
-use strophe_model::{Edit, History, Layer, MediaRef, Phrase, Session, TrackId};
+use strophe_model::{Edit, History, Layer, MediaRef, Phrase, ProjectBundle, Session, Track, TrackColor, TrackId};
 
-/// Owner labels for the pass-the-mic rail. Placeholder until the sync layer.
-pub const OWNERS: [&str; 4] = ["you", "jonah", "mara", "eli"];
+use crate::project_io::{ProjectCommand, ProjectUpdate};
 
 /// Bars captured per Record press (master-clock / bar-aligned mode).
 const CAPTURE_BARS: u8 = 1;
 /// Meter dB floor for the 0..1 level the output meters display.
 const METER_FLOOR_DB: f32 = -60.0;
+
+enum ProjectStatus {
+    Idle,
+    Saving,
+    Loading,
+    Saved,
+    Error(String),
+}
 
 pub struct AppState {
     pub session: Session,
@@ -42,6 +47,13 @@ pub struct AppState {
     playing: Vec<LayerKey>,
     /// Latest output peak, dB per channel, read back each tick.
     meter_db: [f32; 2],
+    /// Blobs referenced by an opened project but unavailable locally. Their
+    /// layers remain in the model and stay silent until the blobs arrive.
+    pub missing_media: BTreeSet<MediaRef>,
+    project_path: Option<PathBuf>,
+    saved_head: strophe_model::NodeId,
+    project_status: ProjectStatus,
+    project_worker: ActorHandle<ProjectCommand>,
 
     // === app-local UI (graduation notes) ===
     /// Audible metronome. Drives the engine click directly; distinct from the
@@ -52,11 +64,24 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// The demo session: the looper-pedal default, seeded through real edits so
-    /// the history graph is populated exactly as live use would. Seeded layers
-    /// carry placeholder media (silent); the engine is live for real captures.
-    pub fn demo() -> Self {
-        let session = Session::new_default();
+    /// A new, empty looper-pedal session. Captures append real playable layers.
+    pub fn new(project_worker: ActorHandle<ProjectCommand>) -> Self {
+        Self::from_project_parts(
+            Session::new_default(),
+            History::new(),
+            InMemoryStore::new(),
+            BTreeSet::new(),
+            project_worker,
+        )
+    }
+
+    fn from_project_parts(
+        session: Session,
+        history: History,
+        store: InMemoryStore,
+        missing_media: BTreeSet<MediaRef>,
+        project_worker: ActorHandle<ProjectCommand>,
+    ) -> Self {
         let (engine, sample_rate) = match Engine::new() {
             Ok(e) => {
                 let sr = e.sample_rate();
@@ -64,74 +89,135 @@ impl AppState {
             }
             Err(e) => (Err(e.to_string()), 0),
         };
+        let saved_head = history.head;
         let mut state = Self {
             session,
-            history: History::new(),
+            history,
             engine,
             sample_rate,
-            store: InMemoryStore::new(),
+            store,
             capture_phase: CapturePhase::Idle,
             capturing_track: None,
             playing: Vec::new(),
             meter_db: [f32::NEG_INFINITY; 2],
+            missing_media,
+            project_path: None,
+            saved_head,
+            project_status: ProjectStatus::Idle,
+            project_worker,
             click: true,
             solo: BTreeSet::new(),
         };
-        state.seed_demo();
         // Apply the initial click + tempo to the engine.
         state.resync_tempo();
         state
     }
 
-    /// Seed the approved demo shape (Guitar/Bass/Drums/Keys, owner colours,
-    /// layer stacks, Guitar armed) through real commits.
-    fn seed_demo(&mut self) {
-        let mut t = 0u64;
-        let names = ["Guitar", "Bass", "Drums", "Keys"];
-        let colors = [
-            strophe_model::TrackColor::rgb(0xe0, 0xa6, 0x4b),
-            strophe_model::TrackColor::rgb(0x56, 0xb3, 0xa8),
-            strophe_model::TrackColor::rgb(0xe0, 0x79, 0x6a),
-            strophe_model::TrackColor::rgb(0xa9, 0xb9, 0x6b),
-        ];
-        for i in 0..self.session.tracks.len().min(4) {
-            let track = &self.session.tracks[i];
-            let (id, from_name, from_color) = (track.id, track.name.clone(), track.color);
-            t += 1;
-            self.history.commit(
-                Edit::RenameTrack { track_id: id, from: from_name, to: names[i].into() },
-                &mut self.session,
-                t,
-            );
-            t += 1;
-            self.history.commit(
-                Edit::SetTrackColor { track_id: id, from: from_color, to: colors[i] },
-                &mut self.session,
-                t,
-            );
-        }
-        let layer_counts = [3usize, 2, 4, 0];
-        for (i, &n) in layer_counts.iter().enumerate() {
-            let track_id = self.session.tracks[i].id;
-            for _ in 0..n {
-                t += 1;
-                let phrase = Phrase::new(MediaRef::ZERO, self.session.bars_per_phrase, self.session.bpm, t);
-                let layer = Layer::new(phrase.id);
-                self.history.commit(Edit::AppendLayer { track_id, phrase, layer }, &mut self.session, t);
+    pub fn project_label(&self) -> String {
+        self.project_path
+            .as_deref()
+            .and_then(|path| path.file_stem())
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "untitled".to_string())
+    }
+
+    pub fn project_status_label(&self) -> String {
+        match &self.project_status {
+            ProjectStatus::Saving => "saving".to_string(),
+            ProjectStatus::Loading => "opening".to_string(),
+            ProjectStatus::Saved => {
+                if self.is_dirty() { "unsaved changes".to_string() } else { "saved".to_string() }
+            }
+            ProjectStatus::Error(message) => format!("project error: {message}"),
+            ProjectStatus::Idle => {
+                if self.is_dirty() { "unsaved changes".to_string() } else { "new session".to_string() }
             }
         }
-        for (track_idx, layer_index) in [(0usize, 0u16), (2, 1)] {
-            let track_id = self.session.tracks[track_idx].id;
-            t += 1;
-            self.history.commit(
-                Edit::SetLayerMute { track_id, layer_index, from: false, to: true },
-                &mut self.session,
-                t,
-            );
+    }
+
+    pub fn is_project_io_active(&self) -> bool {
+        matches!(self.project_status, ProjectStatus::Saving | ProjectStatus::Loading)
+    }
+
+    pub fn choose_project_to_open(&mut self) {
+        if self.is_project_io_active() {
+            return;
         }
-        let guitar = self.session.tracks[0].id;
-        t += 1;
-        self.history.commit(Edit::ArmTrack { track_id: guitar, from: false, to: true }, &mut self.session, t);
+        if self.is_recording() {
+            self.project_status = ProjectStatus::Error("stop recording before opening".to_string());
+            return;
+        }
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("Strophe project", &["strophe"])
+            .pick_file()
+        {
+            self.project_status = ProjectStatus::Loading;
+            if !self.project_worker.command(ProjectCommand::Open { path }) {
+                self.project_status = ProjectStatus::Error("project worker stopped".to_string());
+            }
+        }
+    }
+
+    pub fn choose_project_to_save(&mut self) {
+        if self.is_project_io_active() {
+            return;
+        }
+        if self.is_recording() {
+            self.project_status = ProjectStatus::Error("stop recording before saving".to_string());
+            return;
+        }
+        let path = match self.project_path.clone() {
+            Some(path) => Some(path),
+            None => rfd::FileDialog::new()
+                .add_filter("Strophe project", &["strophe"])
+                .set_file_name("untitled.strophe")
+                .save_file()
+                .map(ensure_project_extension),
+        };
+        if let Some(path) = path {
+            let bundle = ProjectBundle::new(self.session.clone(), self.history.clone());
+            self.project_status = ProjectStatus::Saving;
+            if !self.project_worker.command(ProjectCommand::Save {
+                path,
+                bundle,
+                media: self.store.clone(),
+                saved_head: self.history.head,
+            }) {
+                self.project_status = ProjectStatus::Error("project worker stopped".to_string());
+            }
+        }
+    }
+
+    pub fn apply_project_update(&mut self, update: ProjectUpdate) {
+        match update {
+            ProjectUpdate::Saved { path, saved_head } => {
+                self.project_path = Some(path);
+                self.saved_head = saved_head;
+                self.project_status = ProjectStatus::Saved;
+            }
+            ProjectUpdate::Opened { path, loaded } => {
+                self.stop_all();
+                self.session = loaded.bundle.session;
+                self.history = loaded.bundle.history;
+                self.store = loaded.media;
+                self.missing_media = loaded.missing_media;
+                self.capture_phase = CapturePhase::Idle;
+                self.capturing_track = None;
+                self.solo.clear();
+                self.project_path = Some(path);
+                self.saved_head = self.history.head;
+                self.project_status = ProjectStatus::Saved;
+                self.resync_tempo();
+                self.reconcile_all_playback();
+            }
+            ProjectUpdate::Failed { action, message } => {
+                self.project_status = ProjectStatus::Error(format!("{action}: {message}"));
+            }
+        }
+    }
+
+    fn is_dirty(&self) -> bool {
+        self.history.head != self.saved_head
     }
 
     fn now_ms() -> u64 {
@@ -166,6 +252,11 @@ impl AppState {
         }
     }
 
+    /// Latest output level in dB, for the textual peak readout.
+    pub fn meter_db(&self, ch: usize) -> f32 {
+        self.meter_db.get(ch).copied().unwrap_or(f32::NEG_INFINITY)
+    }
+
     // === the engine tick (host calls ~60fps via runner.update) ===
 
     /// Advance the engine, read back the meter + capture phase, and promote a
@@ -197,16 +288,18 @@ impl AppState {
                 &mut self.session,
                 Self::now_ms(),
             );
-            let key = LayerKey::new(track_id, layer_index);
-            let clocked = self.session.master_clock_enabled;
-            if let Ok(engine) = &mut self.engine {
-                let _ = if clocked {
-                    engine.play_layer_at_next_bar(key, samples, 1.0, true)
-                } else {
-                    engine.play_layer(key, samples, 1.0, true)
-                };
+            if self.track_is_audible(track_idx) {
+                let key = LayerKey::new(track_id, layer_index);
+                let clocked = self.session.master_clock_enabled;
+                if let Ok(engine) = &mut self.engine {
+                    let _ = if clocked {
+                        engine.play_layer_at_next_bar(key, samples, 1.0, true)
+                    } else {
+                        engine.play_layer(key, samples, 1.0, true)
+                    };
+                }
+                self.playing.push(key);
             }
-            self.playing.push(key);
         }
     }
 
@@ -230,6 +323,21 @@ impl AppState {
         let track_id = self.session.tracks[idx].id;
         self.history
             .commit(Edit::ArmTrack { track_id, from: false, to: true }, &mut self.session, now);
+    }
+
+    /// Add an empty track using the session's selected playback profile.
+    pub fn add_track(&mut self) {
+        let index = self.session.tracks.len();
+        let track = Track::new_with_mode(
+            format!("track {}", index + 1),
+            TrackColor::from_palette_index(index),
+            self.session.default_playback_mode,
+        );
+        self.history.commit(
+            Edit::AddTrack { track },
+            &mut self.session,
+            Self::now_ms(),
+        );
     }
 
     /// The Record gesture. Master clock on → a bar-aligned, count-in, fixed
@@ -276,7 +384,7 @@ impl AppState {
             for key in keys {
                 self.stop_layer_key(key);
             }
-        } else {
+        } else if self.track_is_audible(idx) {
             self.reconcile_track_playback(idx);
         }
     }
@@ -295,7 +403,7 @@ impl AppState {
         let key = LayerKey::new(track_id, layer_index);
         if !from {
             self.stop_layer_key(key);
-        } else if !self.session.tracks[track_idx].muted {
+        } else if self.track_is_audible(track_idx) {
             self.play_layer_from_store(track_idx, layer_index as usize);
         }
     }
@@ -328,16 +436,18 @@ impl AppState {
         }
     }
 
-    /// Toggle solo membership for track `idx` (app-local; no engine backing yet).
+    /// Toggle solo membership for track `idx` and reconcile the engine with the
+    /// resulting audible-track set.
     pub fn toggle_solo(&mut self, idx: usize) {
         let Some(track) = self.session.tracks.get(idx) else { return };
         let id = track.id;
         if !self.solo.remove(&id) {
             self.solo.insert(id);
         }
+        self.reconcile_all_playback();
     }
 
-    // === engine playback helpers (mirror the Masonry app) ===
+    // === engine playback helpers ===
 
     /// Push tempo + bar length to the click and re-apply the click enable.
     /// Stops all playing loops first — they were captured at the old grid and
@@ -353,7 +463,9 @@ impl AppState {
         }
     }
 
-    fn stop_all(&mut self) {
+    /// Stop every live loop. The session layers remain intact and can be
+    /// projected back into the engine after a transport command or state change.
+    pub fn stop_all(&mut self) {
         let keys: Vec<LayerKey> = self.playing.drain(..).collect();
         if let Ok(engine) = &mut self.engine {
             for key in keys {
@@ -384,8 +496,23 @@ impl AppState {
         }
     }
 
+    fn track_is_audible(&self, idx: usize) -> bool {
+        let Some(track) = self.session.tracks.get(idx) else { return false };
+        !track.muted && (self.solo.is_empty() || self.solo.contains(&track.id))
+    }
+
+    fn reconcile_all_playback(&mut self) {
+        self.stop_all();
+        let audible: Vec<usize> = (0..self.session.tracks.len())
+            .filter(|&idx| self.track_is_audible(idx))
+            .collect();
+        for idx in audible {
+            self.reconcile_track_playback(idx);
+        }
+    }
+
     /// Play a layer from the store at the next bar, at its stored gain. No-op
-    /// if the layer's media is absent (a silent demo placeholder).
+    /// when the media is unavailable in the current store.
     fn play_layer_from_store(&mut self, track_idx: usize, layer_idx: usize) {
         let Some(track) = self.session.tracks.get(track_idx) else { return };
         let Some(layer) = track.layers.get(layer_idx) else { return };
@@ -400,4 +527,11 @@ impl AppState {
             self.playing.push(key);
         }
     }
+}
+
+fn ensure_project_extension(mut path: PathBuf) -> PathBuf {
+    if path.extension().is_none() {
+        path.set_extension("strophe");
+    }
+    path
 }

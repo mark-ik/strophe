@@ -34,6 +34,11 @@ strophe-model = { path = "crates/strophe-model", version = "0.1.0" }
 # bar-alignment work. Pure std, no engine/UI coupling.
 audio-primitives = { path = "../woodshed/crates/audio-primitives", version = "0.1.0" }
 
+# Portable durable-byte seam shared with Woodshed and Isometry. Strophe keeps
+# its own model and MediaRef identity; muniment owns backend mechanics.
+muniment = { path = "../muniment", version = "0.1.0", default-features = false }
+armillary = { path = "../armillary", version = "0.1.0" }
+
 # Firewheel: modular audio graph engine, the spine of strophe-engine
 # (FT3b-prime). cpal feature enables the default native backend; the
 # symphonium feature gives sample-loading helpers we'll want at FT8.

@@ -16,3 +16,7 @@ strophe-model = { workspace = true }
 audio-primitives = { workspace = true }
 firewheel = { workspace = true }
 blake3 = { workspace = true }
+muniment = { workspace = true }
+
+[dev-dependencies]
+pollster = "0.4"

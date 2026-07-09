@@ -35,6 +35,7 @@
 pub mod capture;
 pub mod click;
 pub mod media;
+pub mod project_store;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;

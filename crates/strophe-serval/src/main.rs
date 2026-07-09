@@ -8,6 +8,7 @@
 //! `strophe_model::Session` + `History` the views derive from (S2).
 
 mod leaves;
+mod project_io;
 mod state;
 mod theme;
 mod view;
@@ -16,9 +17,11 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
 use accesskit::{Action, NodeId as AccessNodeId, Tree, TreeId, TreeUpdate};
+use armillary::{ActorHandle, Wake};
 use layout_dom_api::{DomMutation, LayoutDom as _, LayoutDomMut as _};
 use netrender::{ColorLoad, ExternalTexturePlacement, NetrenderOptions};
 use paint_list_api::{DeviceIntSize, PaintList as _};
@@ -32,6 +35,7 @@ use winit::window::{Window, WindowId};
 use xilem_serval::{PointerClick, Propagation, ServalAppRunner};
 
 use state::AppState;
+use project_io::{ProjectCommand, ProjectUpdate, spawn_project_worker};
 use view::{root, Child};
 
 type Runner = ServalAppRunner<AppState, fn(&AppState) -> Child, Child>;
@@ -39,6 +43,11 @@ type Runner = ServalAppRunner<AppState, fn(&AppState) -> Child, Child>;
 /// Engine tick cadence (~60 fps). Firewheel wants `update()` roughly per frame;
 /// this drives `engine.tick()` (meter read-back, capture promotion, playback).
 const TICK: Duration = Duration::from_millis(16);
+
+#[derive(Clone, Copy)]
+enum HostEvent {
+    ProjectUpdate,
+}
 
 struct App {
     window: Option<Arc<Window>>,
@@ -63,9 +72,26 @@ struct App {
     /// reader's `Click` routes to the same `dispatch_click` path a mouse takes.
     /// Rebuilt each frame the tree changes.
     a11y_route: HashMap<AccessNodeId, NodeId>,
+    project_worker: Option<ActorHandle<ProjectCommand>>,
+    project_updates: Receiver<ProjectUpdate>,
 }
 
 impl App {
+    fn drain_project_updates(&mut self) {
+        let mut updated = false;
+        while let Ok(update) = self.project_updates.try_recv() {
+            if let Some(runner) = self.runner.as_mut() {
+                runner.update(|state| state.apply_project_update(update));
+                updated = true;
+            }
+        }
+        if updated {
+            if let Some(window) = self.window.as_ref() {
+                window.request_redraw();
+            }
+        }
+    }
+
     /// Apply any screen-reader actions the OS queued since the last frame, routing
     /// a `Click` to the same `dispatch_click` path a mouse press takes. The route
     /// map is from the previous frame's tree, which is what the OS acted against.
@@ -185,12 +211,17 @@ impl App {
                     || !muts.is_empty()
                     || bridge.status() == BridgeStatus::Unavailable;
                 if needs_tree {
-                    let (nodes, root_id, actionable) = serval_layout::build_subtree(
+                    // `_with_leaves`: the output meters are `<chisel-leaf>`s, whose
+                    // interiors are invisible to the DOM. The source lets each leaf
+                    // announce itself (a meter reports its level) instead of
+                    // projecting as an opaque, unlabeled box.
+                    let (nodes, root_id, actionable) = serval_layout::build_subtree_with_leaves(
                         &*dom_ref,
                         layout.fragments(),
                         dom_ref.document(),
                         &|d: &ScriptedDom, n: NodeId| AccessNodeId(d.opaque_id(n)),
                         &|_d: &ScriptedDom, _n: NodeId| false,
+                        &mut leaves::LeafA11y(&mut self.leaves),
                     );
                     self.a11y_route = actionable
                         .iter()
@@ -261,7 +292,7 @@ impl App {
     }
 }
 
-impl ApplicationHandler for App {
+impl ApplicationHandler<HostEvent> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_some() {
             return;
@@ -291,7 +322,8 @@ impl ApplicationHandler for App {
         )
         .expect("boot serval host");
         let dom = Rc::new(RefCell::new(ScriptedDom::new()));
-        let runner = Runner::new(dom, root as fn(&AppState) -> Child, AppState::demo());
+        let worker = self.project_worker.take().expect("project worker initialized");
+        let runner = Runner::new(dom, root as fn(&AppState) -> Child, AppState::new(worker));
         // AccessKit bridge: a screen-reader action wakes the loop so the next
         // frame drains and routes it. Installed lazily on the first frame with a
         // laid-out tree (see `redraw`).
@@ -309,6 +341,7 @@ impl ApplicationHandler for App {
         // promotion, playback) and repaint. `update` mutates the owned state
         // and re-diffs the view, so a completed capture's new layer appears.
         if matches!(cause, StartCause::ResumeTimeReached { .. }) {
+            self.drain_project_updates();
             if let Some(runner) = self.runner.as_mut() {
                 runner.update(|s| s.tick());
             }
@@ -316,6 +349,12 @@ impl ApplicationHandler for App {
                 window.request_redraw();
             }
             event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now() + TICK));
+        }
+    }
+
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: HostEvent) {
+        match event {
+            HostEvent::ProjectUpdate => self.drain_project_updates(),
         }
     }
 
@@ -346,8 +385,15 @@ impl ApplicationHandler for App {
 }
 
 fn main() {
-    let event_loop = EventLoop::new().expect("event loop");
+    let event_loop = EventLoop::<HostEvent>::with_user_event()
+        .build()
+        .expect("event loop");
     event_loop.set_control_flow(ControlFlow::Wait);
+    let proxy = event_loop.create_proxy();
+    let wake: Wake = Arc::new(move || {
+        let _ = proxy.send_event(HostEvent::ProjectUpdate);
+    });
+    let (project_worker, project_updates) = spawn_project_worker(wake);
     let mut app = App {
         window: None,
         host: None,
@@ -360,6 +406,8 @@ fn main() {
         rendered: chisel::RenderedLeaves::new(),
         a11y: None,
         a11y_route: HashMap::new(),
+        project_worker: Some(project_worker),
+        project_updates,
     };
     event_loop.run_app(&mut app).expect("run app");
 }
