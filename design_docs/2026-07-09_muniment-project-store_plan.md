@@ -25,11 +25,11 @@ second filesystem protocol inside Strophe.
   `MemoryBackend`.
 - Missing media has distinct save and load behavior.
 - Corrupt media is rejected rather than silently played.
-- A future Serval host can choose Redb on desktop or OPFS in a browser without
+- A future Genet host can choose Redb on desktop or OPFS in a browser without
   changing Strophe model or media semantics.
 
 ## Progress
 
-- 2026-07-09: **LANDED.** Generic storage tests and Serval-host Redb save/open
+- 2026-07-09: **LANDED.** Generic storage tests and Genet-host Redb save/open
   API pass. The local rail reports unavailable media after an open. Remaining
   host work is user-facing project selection and save/open controls.

@@ -14,7 +14,7 @@ timeline or silently inventing a duration for free captures.
 - The mix is mono source material duplicated to stereo float WAV until pan or
   stereo capture exists.
 - Export runs through the existing Armillary project worker and native save
-  dialog, never on the Serval kernel thread.
+  dialog, never on the Genet kernel thread.
 - Clocked capture uses `Session::bars_per_phrase`, so phrase metadata now agrees
   with the recorded loop length.
 - The clock, capture target, and export bar duration use the full session time

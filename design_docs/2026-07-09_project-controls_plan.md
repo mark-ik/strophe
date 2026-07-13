@@ -3,11 +3,11 @@
 ## Goal
 
 Turn the local project store into a usable desktop workflow without blocking the
-Serval kernel or the audio engine.
+Genet kernel or the audio engine.
 
 ## Design
 
-- `rfd` provides native open/save dialogs until Serval exposes a shared desktop
+- `rfd` provides native open/save dialogs until Genet exposes a shared desktop
   dialog API.
 - An Armillary actor owns Redb project I/O. The host sends cloned save snapshots
   or open paths and drains typed updates on its own event loop.
@@ -21,7 +21,7 @@ Serval kernel or the audio engine.
 
 - Open and Save are visible, accessible controls.
 - New projects prompt for a `.strophe` path; later saves reuse that path.
-- Redb I/O never runs on the Serval kernel thread.
+- Redb I/O never runs on the Genet kernel thread.
 - A worker result updates the view and preserves missing-media behavior.
 - The worker has a Redb save/open round-trip test.
 

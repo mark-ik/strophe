@@ -1,14 +1,14 @@
 [package]
-name = "strophe-serval"
+name = "strophe-genet"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Strophe's serval desktop host: winit window + netrender present over the serval view layer. Serval-host refactor S0+."
+description = "Strophe's genet desktop host: winit window + netrender present over the genet view layer. Genet-host refactor S0+."
 
 [dependencies]
-# AccessKit tree/action types for the a11y bridge (serval_winit_host::AccessKitBridge).
+# AccessKit tree/action types for the a11y bridge (genet_winit_host::AccessKitBridge).
 accesskit = { workspace = true }
 strophe-model = { workspace = true }
 strophe-engine = { workspace = true }
@@ -16,9 +16,9 @@ audio-primitives = { workspace = true }
 xilem-serval = { workspace = true }
 chisel = { workspace = true }
 layout-dom-api = { workspace = true }
-serval-scripted-dom = { workspace = true }
-serval-layout = { workspace = true }
-serval-winit-host = { workspace = true }
+genet-scripted-dom = { workspace = true }
+genet-layout = { workspace = true }
+genet-winit-host = { workspace = true }
 netrender = { workspace = true }
 paint_list_api = { workspace = true }
 paint_list_render = { workspace = true }

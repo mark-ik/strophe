@@ -1,4 +1,4 @@
-//! Background project save/open work for the Serval host.
+//! Background project save/open work for the Genet host.
 //!
 //! The host kernel keeps the live audio engine and session state. This actor
 //! receives cloned save snapshots or a project path, performs Redb I/O away from

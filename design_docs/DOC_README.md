@@ -14,7 +14,7 @@ before any other doc in this directory.
 - [2026-05-18_initial_plan.md](2026-05-18_initial_plan.md) — Initial
   scaffold, workspace skeleton, and feature-target ladder from
   click-track engine through P2P session hand-off.
-- [2026-07-08_serval_host_refactor_plan.md](2026-07-08_serval_host_refactor_plan.md)
+- [2026-07-08_genet_host_refactor_plan.md](2026-07-08_genet_host_refactor_plan.md)
   — **LANDED.** UI rebuilt fresh on `xilem_serval` (the one-screen loop-recorder
   design, not a Masonry port) with `chisel` leaf waveforms/meters and the
   `strophe_engine` spine wired in. The Masonry app + the `mark-ik/xilem` fork
@@ -26,11 +26,11 @@ before any other doc in this directory.
   no backing subsystem. Persistence and sync remain separately scoped.
 - [2026-07-09_muniment-project-store_plan.md](2026-07-09_muniment-project-store_plan.md)
   - **LANDED.** Local project persistence over Muniment's generic backend seam,
-  with a Serval-host Redb API. The manifest retains Strophe's session/history
+  with a Genet-host Redb API. The manifest retains Strophe's session/history
   semantics and media keeps its existing `MediaRef` identity.
 - [2026-07-09_project-controls_plan.md](2026-07-09_project-controls_plan.md)
   - **LANDED.** Native desktop open/save controls over the Muniment store, with
-  Armillary moving Redb work off the Serval kernel thread.
+  Armillary moving Redb work off the Genet kernel thread.
 - [2026-07-09_loop-export_plan.md](2026-07-09_loop-export_plan.md)
   - **LANDED.** Loop-first WAV export through the existing project worker, with
   explicit behavior for unequal free-capture loop lengths.
@@ -66,11 +66,11 @@ section whenever a durable working insight emerges from a session.
 - **The model is framework-agnostic.** `strophe-model` does not depend
   on cpal, xilem, masonry, or any UI/audio framework. The audio
   engine, the UI, and the sync layer all consume it as a peer.
-- **The UI rides Serval, not Masonry (from 2026-07-08).** The active host is
+- **The UI rides Genet, not Masonry (from 2026-07-08).** The active host is
   `xilem_serval` with `chisel` leaves for waveform and meter drawing. Structure
-  is native Serval views plus tinct CSS. The Masonry application and fork were
+  is native Genet views plus tinct CSS. The Masonry application and fork were
   retired; the audio spine remains independent. See
-  [2026-07-08_serval_host_refactor_plan.md](2026-07-08_serval_host_refactor_plan.md).
+  [2026-07-08_genet_host_refactor_plan.md](2026-07-08_genet_host_refactor_plan.md).
 - **Async-first collaboration**, never real-time multiplayer jamming.
   The product's identity is sequential turn-taking over Moothold; that
   shape must not erode into "everyone plays together over the net" as

@@ -11,7 +11,7 @@ layer per track.
 
 ## Status
 
-Pre-alpha. The Serval desktop host, framework-independent session model, and
+Pre-alpha. The Genet desktop host, framework-independent session model, and
 Firewheel audio engine are working together for local record, playback, track
 mute, solo, tempo, click, master-clock capture, and history-backed track
 creation. Native Open and Save controls queue project work off the UI thread,
@@ -66,12 +66,12 @@ crates/
   strophe-engine/    Firewheel graph, capture, click, media-store abstraction
   strophe-model/     Framework-independent session, tracks, layers, history
   strophe-headless/  Scripted engine harness
-  strophe-serval/    Serval/winit desktop host and one-screen recorder UI
+  strophe-genet/    Genet/winit desktop host and one-screen recorder UI
 design_docs/         Product reference and active implementation plans
 ```
 
 `strophe-model` owns durable session truth. `strophe-engine` projects that
-truth into a Firewheel runtime. `strophe-serval` owns host interaction and does
+truth into a Firewheel runtime. `strophe-genet` owns host interaction and does
 not become a second session model.
 
 ## Build
@@ -80,7 +80,7 @@ The workspace expects the sibling `woodshed` checkout because
 `strophe-engine` uses its shared `audio-primitives` crate.
 
 ```text
-cargo run -p strophe-serval
+cargo run -p strophe-genet
 cargo run -p strophe-headless
 cargo test -p strophe-model
 cargo test -p strophe-engine

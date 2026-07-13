@@ -1,4 +1,4 @@
-//! The app state behind the serval UI: the real `strophe_model::Session` +
+//! The app state behind the genet UI: the real `strophe_model::Session` +
 //! `History`, plus the audio `strophe_engine::Engine` and its content store.
 //!
 //! Every data-bearing gesture commits a real `Edit`, so undo/redo + the future

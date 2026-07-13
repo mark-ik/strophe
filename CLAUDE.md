@@ -22,10 +22,10 @@ crates/
   strophe-model/     Session and history authority; framework independent
   strophe-engine/    Firewheel capture, playback, click, and media abstraction
   strophe-headless/  Scripted audio-engine harness
-  strophe-serval/    Serval/winit application host and recorder UI
+  strophe-genet/    Genet/winit application host and recorder UI
 ```
 
-Run the desktop application with `cargo run -p strophe-serval`. The retired
+Run the desktop application with `cargo run -p strophe-genet`. The retired
 Masonry application and `strophe-widgets` crate are not part of this workspace.
 
 The sibling `../woodshed/crates/audio-primitives` path dependency provides
@@ -37,7 +37,7 @@ shared pure DSP helpers. Do not couple Strophe to a Woodshed application crate.
   that must survive undo or synchronization belong in `Edit` and `History`.
 - Keep `strophe-engine` as a runtime projection. It can own real-time graph and
   device concerns, but not authoritative session state.
-- Keep `strophe-serval` thin. Host-local presentation state is acceptable;
+- Keep `strophe-genet` thin. Host-local presentation state is acceptable;
   session, media, and collaboration semantics are not.
 - Build local durability before peer synchronization: a peer cannot reliably
   import or share a session that the originating host cannot reopen.

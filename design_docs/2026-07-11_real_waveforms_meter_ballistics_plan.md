@@ -17,7 +17,7 @@ hold without putting host display policy into project state.
 - `strophe-engine::waveform` owns Strophe track/layer projection. Track views
   reuse export's source selection and repeating-loop renderer, so gain, mute,
   `Sum`/`SelectOne`, sample-rate validation, and free-loop repetition agree.
-- `strophe-serval` owns projection caches, model-id-to-leaf keys, responsive
+- `strophe-genet` owns projection caches, model-id-to-leaf keys, responsive
   Chisel composition, missing-media presentation, and host-local timing.
 - Chisel owns retained vector leaves and registry lifecycle only. It does not
   learn audio samples or Strophe's model.
@@ -38,7 +38,7 @@ hold without putting host display policy into project state.
 ## Sidequest Landed
 
 Strophe now builds and installs its initial accessibility tree while the native
-window is hidden, then reveals the window. Serval's `AccessKitBridge` docs now
+window is hidden, then reveals the window. Genet's `AccessKitBridge` docs now
 state the Windows pre-show installation contract for other `xilem_serval` hosts.
 
 ## Remaining

@@ -1,9 +1,9 @@
-//! Strophe's serval desktop host (serval-host refactor).
+//! Strophe's genet desktop host (genet-host refactor).
 //!
-//! A winit window presenting the Strophe view tree: `ServalAppRunner` diffs
+//! A winit window presenting the Strophe view tree: `GenetAppRunner` diffs
 //! the views into a `ScriptedDom`, a retained `IncrementalLayout` lays it
 //! out, the paint list lowers to a `netrender::Scene`, and
-//! `serval-winit-host`'s `SurfaceHost` rasterizes and composites. The view
+//! `genet-winit-host`'s `SurfaceHost` rasterizes and composites. The view
 //! layer + theme live in [`view`] / [`theme`]; [`state`] holds the real
 //! `strophe_model::Session` + `History` the views derive from (S2).
 
@@ -26,21 +26,21 @@ use armillary::{ActorHandle, Wake};
 use layout_dom_api::{DomMutation, LayoutDom as _, LayoutDomMut as _};
 use netrender::{ColorLoad, ExternalTexturePlacement, NetrenderOptions};
 use paint_list_api::{DeviceIntSize, PaintList as _};
-use serval_layout::{IncrementalLayout, ScrollOffsets};
-use serval_scripted_dom::{NodeId, ScriptedDom};
-use serval_winit_host::{AccessKitBridge, BridgeStatus, SurfaceHost};
+use genet_layout::{IncrementalLayout, ScrollOffsets};
+use genet_scripted_dom::{NodeId, ScriptedDom};
+use genet_winit_host::{AccessKitBridge, BridgeStatus, SurfaceHost};
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
-use xilem_serval::{PointerClick, Propagation, ServalAppRunner};
+use xilem_serval::{PointerClick, Propagation, GenetAppRunner};
 
 use identity::LocalIdentity;
 use project_io::{ProjectCommand, ProjectUpdate, spawn_project_worker};
 use state::AppState;
 use view::{Child, root};
 
-type Runner = ServalAppRunner<AppState, fn(&AppState) -> Child, Child>;
+type Runner = GenetAppRunner<AppState, fn(&AppState) -> Child, Child>;
 
 /// Engine tick cadence (~60 fps). Firewheel wants `update()` roughly per frame;
 /// this drives `engine.tick()` (meter read-back, capture promotion, playback).
@@ -206,7 +206,7 @@ impl App {
             // Accessibility: project the same laid-out DOM this frame rendered into
             // an AccessKit tree and push it to the OS bridge, rebuilding only when
             // the DOM or size changed (or the adapter isn't installed yet). Strophe
-            // is a single serval surface, so it skips nothing and salts nothing —
+            // is a single genet surface, so it skips nothing and salts nothing —
             // the engine's opaque ids are the AccessKit ids. `build_subtree` hands
             // back the actionable nodes; we remember them so a screen reader's
             // request routes back to the view's click path.
@@ -220,7 +220,7 @@ impl App {
                     // interiors are invisible to the DOM. The source lets each leaf
                     // announce itself (a meter reports its level) instead of
                     // projecting as an opaque, unlabeled box.
-                    let (nodes, root_id, actionable) = serval_layout::build_subtree_with_leaves(
+                    let (nodes, root_id, actionable) = genet_layout::build_subtree_with_leaves(
                         &*dom_ref,
                         layout.fragments(),
                         dom_ref.document(),
@@ -330,7 +330,7 @@ impl ApplicationHandler<HostEvent> for App {
                 ..Default::default()
             },
         )
-        .expect("boot serval host");
+        .expect("boot genet host");
         let dom = Rc::new(RefCell::new(ScriptedDom::new()));
         let worker = self
             .project_worker
@@ -354,7 +354,7 @@ impl ApplicationHandler<HostEvent> for App {
             let dom_ref = dom.borrow();
             let sheets = [self.sheet.as_str()];
             let layout = IncrementalLayout::new(&*dom_ref, &sheets, lw, lh);
-            let (nodes, root_id, actionable) = serval_layout::build_subtree_with_leaves(
+            let (nodes, root_id, actionable) = genet_layout::build_subtree_with_leaves(
                 &*dom_ref,
                 layout.fragments(),
                 dom_ref.document(),

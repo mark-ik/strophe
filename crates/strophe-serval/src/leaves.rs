@@ -5,7 +5,7 @@
 //! The output meter is chisel's built-in [`chisel::Meter`]. The view places a
 //! `<chisel-leaf key=…>` box; the host owns the leaves out of band in a
 //! [`chisel::LeafRegistry`] and reconciles them from [`AppState`] each frame,
-//! so serval stays a uniform-DOM engine and the widget content lives host-side.
+//! so genet stays a uniform-DOM engine and the widget content lives host-side.
 //!
 //! Keys derive from stable track/phrase identities inside disjoint waveform and
 //! meter namespaces, so reordering does not retarget retained leaf state.
@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use audio_primitives::WaveformPeak;
 use chisel::{ColorF, Leaf, LeafRegistry, PaintCx, Path, RenderedLeaves, Size, SizeHint};
 use paint_list_api::PaintCmd;
-use serval_layout::LeafPaintSource;
+use genet_layout::LeafPaintSource;
 use strophe_model::{MediaRef, PhraseId, TrackColor, TrackId};
 
 use crate::state::AppState;
@@ -361,7 +361,7 @@ fn ensure_meter(registry: &mut LeafRegistry<u64>, key: u64, level: f32, peak: f3
 
 // --- LeafPaintSource adapter -------------------------------------------
 
-/// Forwards serval-layout's per-leaf command query to chisel's rendered cache.
+/// Forwards genet-layout's per-leaf command query to chisel's rendered cache.
 /// A newtype because both traits live in other crates (orphan rule).
 pub struct LeafSource<'a>(pub &'a RenderedLeaves);
 
@@ -373,14 +373,14 @@ impl LeafPaintSource for LeafSource<'_> {
 
 // --- LeafA11ySource adapter --------------------------------------------
 
-/// Forwards serval-layout's a11y walk to each leaf's own `accessibility()`.
-/// serval-layout knows `<chisel-leaf>` as an element but not chisel's types, so
+/// Forwards genet-layout's a11y walk to each leaf's own `accessibility()`.
+/// genet-layout knows `<chisel-leaf>` as an element but not chisel's types, so
 /// the host bridges: the output meters announce as meters carrying their level,
 /// and any leaf that declares an action becomes routable like a DOM control.
 /// A newtype for the same orphan-rule reason as [`LeafSource`].
 pub struct LeafA11y<'a>(pub &'a mut LeafRegistry<u64>);
 
-impl serval_layout::LeafA11ySource for LeafA11y<'_> {
+impl genet_layout::LeafA11ySource for LeafA11y<'_> {
     fn describe_leaf(&mut self, key: u64, node: &mut accesskit::Node) {
         if let Some(leaf) = self.0.get_mut(&key) {
             leaf.accessibility(node);

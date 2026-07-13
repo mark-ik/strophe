@@ -47,7 +47,7 @@ have already been reconciled.
 - 2026-07-10: **PARTIAL.** The engine protocol and focused tests are landed.
   Core same-root branch acceptance is landed; branch merge still waits for a
   conflict-reconciliation policy.
-- 2026-07-11: **PARTIAL.** The Serval host now loads or creates one durable
+- 2026-07-11: **PARTIAL.** The Genet host now loads or creates one durable
   local identity in a `personae` sealed record using its OS-protected startup
   root. Windows has the concrete DPAPI backend; unsupported platforms expose an
   unavailable state rather than minting an ephemeral identity. Recipient key

@@ -22,12 +22,12 @@ every session-structure gesture must remain visible to history.
 - Solo mutes non-solo tracks in the engine projection; stop ends live voices.
 - The UI does not advertise a hand-off, fake collaborator activity, or an
   action with no behavior.
-- README and repository guidance describe the Serval host and current gaps.
+- README and repository guidance describe the Genet host and current gaps.
 
 ## Progress
 
 - 2026-07-09: Landed the scope above. `cargo test -p strophe-model` passed
-  with 32 unit tests and 2 integration tests; `cargo check -p strophe-serval`
+  with 32 unit tests and 2 integration tests; `cargo check -p strophe-genet`
   passed. The repository-wide format check still proposes unrelated preexisting
   formatting changes outside this slice.
 

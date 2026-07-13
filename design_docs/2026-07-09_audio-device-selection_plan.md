@@ -9,7 +9,7 @@ machine-specific hardware part of a shared Strophe project.
 
 - `strophe-engine` enumerates Firewheel CPAL devices as stable string IDs plus
   display names. `AudioDeviceSelection` keeps those IDs host-local.
-- The Serval transport has separate Input and Output dropdowns. `System default`
+- The Genet transport has separate Input and Output dropdowns. `System default`
   remains an explicit option rather than a hidden fallback.
 - Changing a device stops the old engine, builds a new engine against the
   selected IDs, restores the click/meter configuration, then re-projects every
@@ -31,5 +31,5 @@ machine-specific hardware part of a shared Strophe project.
 ## Progress
 
 - 2026-07-09: **LANDED.** Firewheel device enumeration and selection now back
-  Serval transport dropdowns. Focused tests cover selector mapping, malformed
+  Genet transport dropdowns. Focused tests cover selector mapping, malformed
   IDs following the system-default fallback, and source-rate playback speed.

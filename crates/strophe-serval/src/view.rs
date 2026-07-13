@@ -1,4 +1,4 @@
-//! The Strophe UI as serval views (2026-07-08 concept; S2: real data).
+//! The Strophe UI as genet views (2026-07-08 concept; S2: real data).
 //!
 //! One screen: the pass-the-mic circle | the loop table | the transport.
 //! Everything data-bearing derives from [`AppState`]'s `Session`; gestures
@@ -8,13 +8,13 @@
 
 use strophe_model::{PhraseId, PlaybackMode, TrackColor, TrackId};
 use xilem_serval::{
-    AnyView, SelectState, ServalCtx, ServalElement, clickable, el, lens, select, text,
+    AnyView, SelectState, GenetCtx, GenetElement, clickable, el, lens, select, text,
 };
 
 use crate::leaves::{METER_L, METER_R, layer_wave_key, wave_key};
 use crate::state::AppState;
 
-pub type Child = Box<dyn AnyView<AppState, (), ServalCtx, ServalElement>>;
+pub type Child = Box<dyn AnyView<AppState, (), GenetCtx, GenetElement>>;
 
 /// A `<chisel-leaf>` block: carries only its key + box; the host renders the
 /// registered leaf's Path-A commands into it (see [`crate::leaves`]).

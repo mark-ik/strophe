@@ -4,9 +4,9 @@ members = [
     "crates/strophe-engine",
     "crates/strophe-model",
     "crates/strophe-headless",
-    # The serval-host UI (2026-07-08 refactor). At the parity cut the Masonry
+    # The genet-host UI (2026-07-08 refactor). At the parity cut the Masonry
     # `strophe` bin + `strophe-widgets` were deleted; this is the only UI now.
-    "crates/strophe-serval",
+    "crates/strophe-genet",
 ]
 
 [workspace.package]
@@ -17,8 +17,8 @@ repository = "https://github.com/mark-ik/strophe"
 rust-version = "1.92"
 
 [workspace.dependencies]
-# AccessKit tree/action types for the serval host's a11y bridge (must track
-# serval's accesskit pin so `TreeUpdate` unifies across serval-winit-host).
+# AccessKit tree/action types for the genet host's a11y bridge (must track
+# genet's accesskit pin so `TreeUpdate` unifies across genet-winit-host).
 accesskit = "0.24"
 # Internal crates. The `strophe` (app) and `strophe-headless` (audio
 # test harness) binaries are workspace members but not dependency
@@ -61,16 +61,16 @@ firewheel = { version = "0.10", features = [
 
 winit = "0.30"
 
-# UI — serval host (2026-07-08 serval-host refactor). The new UI stack;
-# mirrors woodshed's serval section. GIT deps on the owned repos; local
+# UI — genet host (2026-07-08 genet-host refactor). The new UI stack;
+# mirrors woodshed's genet section. GIT deps on the owned repos; local
 # checkouts ride the gitignored .cargo/config.toml source-specific [patch].
-# Build strophe-serval from the strophe cwd so that patch applies.
-xilem-serval = { package = "serval-xilem", git = "https://github.com/mark-ik/serval.git", branch = "main" }
-chisel = { package = "serval-chisel", git = "https://github.com/mark-ik/serval.git", branch = "main" }
-layout-dom-api = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
-serval-scripted-dom = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
-serval-layout = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
-serval-winit-host = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
+# Build strophe-genet from the strophe cwd so that patch applies.
+xilem-serval = { package = "serval-xilem", git = "https://github.com/mark-ik/genet.git", branch = "main" }
+chisel = { package = "serval-chisel", git = "https://github.com/mark-ik/genet.git", branch = "main" }
+layout-dom-api = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
+genet-scripted-dom = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
+genet-layout = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
+genet-winit-host = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
 netrender = { git = "https://github.com/mark-ik/netrender.git", branch = "main" }
 paint_list_api = { git = "https://github.com/mark-ik/netrender.git", branch = "main" }
 paint_list_render = { git = "https://github.com/mark-ik/netrender.git", branch = "main" }
@@ -103,22 +103,22 @@ blake3 = "1.5"
 # Async runtime (UI side; never on the audio thread)
 tokio = { version = "1.50", features = ["rt", "rt-multi-thread", "time", "sync"] }
 
-# Mirror of serval's [patch.crates-io] entries this workspace's serval graph
+# Mirror of genet's [patch.crates-io] entries this workspace's genet graph
 # needs (patches are per-workspace-root, not inherited through git deps —
-# woodshed carries the same mirror). Keep in sync with serval's fork pins.
+# woodshed carries the same mirror). Keep in sync with genet's fork pins.
 [patch.crates-io]
-# NO stylo/stylo_atoms patch (removed 2026-07-12, mirroring serval): the fork
-# is now the RENAMED `serval-stylo` family, and a `[patch]` cannot rename its
-# target. Serval's crates git-dep serval-stylo by package rename instead, so no
+# NO stylo/stylo_atoms patch (removed 2026-07-12, mirroring genet): the fork
+# is now the RENAMED `genet-stylo` family, and a `[patch]` cannot rename its
+# target. Genet's crates git-dep genet-stylo by package rename instead, so no
 # crates.io `stylo` remains in the graph to patch. Keeping the old patch
-# reintroduced the pre-rename fork beside serval-stylo, and
+# reintroduced the pre-rename fork beside genet-stylo, and
 # `links = "servo_style_crate"` (one Stylo per graph) made that a hard error.
 #
 # stylo_taffy MUST be patched for the same reason: the registry copy names
-# crates.io stylo, which would pull a second Stylo into the graph. Serval
-# vendors a stylo_taffy that git-deps serval-stylo instead; redirect to it.
-# See serval's docs/2026-07-12_ring3_fork_rename_publish_plan.md.
-stylo_taffy = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
-# serval's vendored forks (taffy float-layout, in-process ipc-channel).
-taffy = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
-ipc-channel = { git = "https://github.com/mark-ik/serval.git", branch = "main" }
+# crates.io stylo, which would pull a second Stylo into the graph. Genet
+# vendors a stylo_taffy that git-deps genet-stylo instead; redirect to it.
+# See genet's docs/2026-07-12_ring3_fork_rename_publish_plan.md.
+stylo_taffy = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
+# genet's vendored forks (taffy float-layout, in-process ipc-channel).
+taffy = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
+ipc-channel = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
