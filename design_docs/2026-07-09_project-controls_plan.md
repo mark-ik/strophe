@@ -20,7 +20,7 @@ Genet kernel or the audio engine.
 ## Done Conditions
 
 - Open and Save are visible, accessible controls.
-- New projects prompt for a `.strophe` path; later saves reuse that path.
+- New projects prompt for a `.hocket` path; later saves reuse that path.
 - Redb I/O never runs on the Genet kernel thread.
 - A worker result updates the view and preserves missing-media behavior.
 - The worker has a Redb save/open round-trip test.
@@ -35,4 +35,4 @@ Genet kernel or the audio engine.
   `Correlated<T>`, proven by Isometry's authority actor. The next project-worker
   touch should stamp Save/Open/Export commands and return that ID on every
   result, replacing the current action-string-only failure correlation. This is
-  an adoption note, not a claim that Strophe has migrated yet.
+  an adoption note, not a claim that Hocket has migrated yet.

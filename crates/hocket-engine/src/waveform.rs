@@ -1,4 +1,4 @@
-//! Real waveform overviews projected from Strophe session and media state.
+//! Real waveform overviews projected from Hocket session and media state.
 
 use audio_primitives::{WaveformPeak, min_max_peaks};
 use hocket_model::Session;

@@ -6,7 +6,7 @@
 //! proper when the master clock becomes a first-class engine concept.
 //!
 //! The synthesis (sine burst + exponential decay) lives in the shared
-//! [`audio_primitives::click`] crate, so Strophe's click and Woodshed's
+//! [`audio_primitives::click`] crate, so Hocket's click and Woodshed's
 //! metronome sound identical. This module just pins the metronome's
 //! voicing constants and the engine-facing signature.
 

@@ -30,7 +30,7 @@ timeline.
 
 ## Progress
 
-- 2026-07-09: **LANDED.** `strophe-engine` has typed duration policies and
+- 2026-07-09: **LANDED.** `hocket-engine` has typed duration policies and
   focused meter-aware rendering tests. The Genet header exposes Cycle/Bars
   controls and the project worker snapshots the selected policy for WAV export.
   The shared bar-frame helper also corrected the engine's old numerator-only

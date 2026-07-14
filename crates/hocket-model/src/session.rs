@@ -1,4 +1,4 @@
-//! Session: top-level container for everything in a strophe project.
+//! Session: top-level container for everything in a hocket project.
 //!
 //! Holds transport settings, tracks (each a stack of layers), the
 //! pool of all phrases captured in this session, and a reference to
@@ -15,7 +15,7 @@ use crate::track::{PlaybackMode, Track, TrackColor};
 /// Time signature in beats-per-bar + beat-unit.
 ///
 /// Mirrors `woodshed_audio::TimeSignature`'s shape so the engine can
-/// translate without loss. Kept local to keep `strophe-model`
+/// translate without loss. Kept local to keep `hocket-model`
 /// framework-agnostic per `CLAUDE.md`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TimeSignature {
@@ -61,7 +61,7 @@ pub mod deeler_defaults {
     pub const BPM: f32 = 120.0;
 }
 
-/// A strophe session.
+/// A hocket session.
 ///
 /// Counts (track count, bars per phrase) are stored explicitly rather
 /// than baked into types, so widening any of them is a session-config

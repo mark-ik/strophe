@@ -12,7 +12,7 @@
 //!   child without deleting the existing future. Checkout moves between sibling
 //!   branches through their lowest common ancestor.
 //! - **No edit reconciliation yet.** A remote branch can be integrated and
-//!   checked out, but Strophe does not synthesize a combined head from
+//!   checked out, but Hocket does not synthesize a combined head from
 //!   conflicting concurrent edits. That requires an explicit merge policy.
 //! - **Phrase pool is append-only.** Inverting an `AppendLayer` does
 //!   not remove the phrase from `session.phrases` — only the layer

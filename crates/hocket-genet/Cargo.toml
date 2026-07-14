@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Strophe's genet desktop host: winit window + netrender present over the genet view layer. Genet-host refactor S0+."
+description = "Hocket's genet desktop host: winit window + netrender present over the genet view layer. Genet-host refactor S0+."
 
 [dependencies]
 # AccessKit tree/action types for the a11y bridge (genet_winit_host::AccessKitBridge).

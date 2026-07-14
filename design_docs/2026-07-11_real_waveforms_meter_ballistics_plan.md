@@ -14,13 +14,13 @@ hold without putting host display policy into project state.
 
 - `audio-primitives` owns pure signed min/max peak extraction and configurable
   normalized meter ballistics. It depends on neither Firewheel nor Chisel.
-- `strophe-engine::waveform` owns Strophe track/layer projection. Track views
+- `hocket-engine::waveform` owns Hocket track/layer projection. Track views
   reuse export's source selection and repeating-loop renderer, so gain, mute,
   `Sum`/`SelectOne`, sample-rate validation, and free-loop repetition agree.
-- `strophe-genet` owns projection caches, model-id-to-leaf keys, responsive
+- `hocket-genet` owns projection caches, model-id-to-leaf keys, responsive
   Chisel composition, missing-media presentation, and host-local timing.
 - Chisel owns retained vector leaves and registry lifecycle only. It does not
-  learn audio samples or Strophe's model.
+  learn audio samples or Hocket's model.
 
 ## Done Conditions
 
@@ -37,7 +37,7 @@ hold without putting host display policy into project state.
 
 ## Sidequest Landed
 
-Strophe now builds and installs its initial accessibility tree while the native
+Hocket now builds and installs its initial accessibility tree while the native
 window is hidden, then reveals the window. Genet's `AccessKitBridge` docs now
 state the Windows pre-show installation contract for other `xilem_serval` hosts.
 
@@ -48,6 +48,6 @@ state the Windows pre-show installation contract for other `xilem_serval` hosts.
 - Persist or expose meter timing in a settings surface if users need profiles.
 - Add peak-file pyramids when projects outgrow inexpensive in-memory overview
   generation.
-- Promote the Strophe-owned audio leaf only after Woodshed or another app has a
+- Promote the Hocket-owned audio leaf only after Woodshed or another app has a
   concrete Chisel waveform consumer.
 - A zoomed editable waveform is a separate Path-B product feature.

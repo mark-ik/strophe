@@ -2,13 +2,13 @@
 
 ## Goal
 
-Define the complete, authentic payload that one Strophe peer hands to another,
+Define the complete, authentic payload that one Hocket peer hands to another,
 without tying it to a premature network carrier or pretending divergent edits
 have already been reconciled.
 
 ## Design
 
-- `strophe-engine::handoff` builds a versioned envelope containing a project
+- `hocket-engine::handoff` builds a versioned envelope containing a project
   bundle plus every media blob referenced by its phrases. It refuses incomplete
   snapshots and verifies each media hash on receipt.
 - The sender derives a session-scoped signing key through `personae`; a

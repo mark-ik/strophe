@@ -1,4 +1,4 @@
-//! Offline WAV export of Strophe's current audible loop mix.
+//! Offline WAV export of Hocket's current audible loop mix.
 //!
 //! Export is intentionally loop-first: the default path renders one complete
 //! shared cycle. It refuses unequal loop lengths rather than guessing a song
@@ -153,7 +153,7 @@ pub fn render_mix_for_frames(
     render_sources_for_frames(sources, frames)
 }
 
-/// Write a stereo floating-point WAV. Strophe captures mono today, so the
+/// Write a stereo floating-point WAV. Hocket captures mono today, so the
 /// offline mix is duplicated to L/R until pan or stereo devices exist.
 pub fn write_stereo_wav(path: impl AsRef<Path>, mix: &RenderedMix) -> Result<(), ExportError> {
     let spec = hound::WavSpec {

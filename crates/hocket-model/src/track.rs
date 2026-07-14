@@ -62,7 +62,7 @@ impl Default for TrackColor {
 /// How a track's layers map to audible output.
 ///
 /// Each session profile picks a default:
-/// - **Looper-pedal profile** (Strophe's default): `Sum`
+/// - **Looper-pedal profile** (Hocket's default): `Sum`
 /// - **Deeler profile**: `SelectOne { active: None }`
 ///
 /// Profiles are not enforced at the type level — `PlaybackMode` is

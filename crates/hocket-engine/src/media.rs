@@ -1,7 +1,7 @@
 //! Content-addressed media storage.
 //!
 //! Captured audio buffers are addressed by their BLAKE3 hash. The model
-//! crate (`strophe-model`) stores `MediaRef` values; the actual `f32`
+//! crate (`hocket-model`) stores `MediaRef` values; the actual `f32`
 //! buffers live here (or, later, in a filesystem / Moothold-backed
 //! store implementing the same trait).
 //!

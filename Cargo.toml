@@ -5,7 +5,7 @@ members = [
     "crates/hocket-model",
     "crates/hocket-headless",
     # The genet-host UI (2026-07-08 refactor). At the parity cut the Masonry
-    # `strophe` bin + `strophe-widgets` were deleted; this is the only UI now.
+    # `hocket` bin + `hocket-widgets` were deleted; this is the only UI now.
     "crates/hocket-genet",
 ]
 
@@ -34,7 +34,7 @@ hocket-model = { path = "crates/hocket-model", version = "0.1.0" }
 # bar-alignment work. Pure std, no engine/UI coupling.
 audio-primitives = { path = "../woodshed/crates/audio-primitives", version = "0.1.0" }
 
-# Portable durable-byte seam shared with Woodshed and Isometry. Strophe keeps
+# Portable durable-byte seam shared with Woodshed and Isometry. Hocket keeps
 # its own model and MediaRef identity; muniment owns backend mechanics.
 muniment = { path = "../muniment", version = "0.1.0", default-features = false }
 armillary = { path = "../armillary", version = "0.1.0" }
@@ -52,12 +52,12 @@ firewheel = { version = "0.10", features = [
     "stream_nodes",
 ] }
 
-# Woodshed-audio is no longer a Strophe dependency as of FT3b-prime —
+# Woodshed-audio is no longer a Hocket dependency as of FT3b-prime —
 # the SequencerEngine wrap retired in favor of the Firewheel graph.
-# Strophe is now the *pressure vessel* for the reusable audio layer;
+# Hocket is now the *pressure vessel* for the reusable audio layer;
 # the relationship to Woodshed is via future shared crates
 # (audio-primitives, audio-widgets, audio-devices), not direct
-# coupling. See memory/project_strophe_audio_pressure_vessel.md.
+# coupling. See memory/project_hocket_audio_pressure_vessel.md.
 
 winit = "0.30"
 

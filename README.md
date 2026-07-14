@@ -1,6 +1,6 @@
-# Strophe
+# Hocket
 
-Strophe is a cross-platform loop recorder for building a session one turn at a
+Hocket is a cross-platform loop recorder for building a session one turn at a
 time. Its collaboration model is passing the mic around a circle: people add
 parts asynchronously rather than trying to jam across a network.
 
@@ -63,27 +63,27 @@ settings, not fixed product limits.
 
 ```
 crates/
-  strophe-engine/    Firewheel graph, capture, click, media-store abstraction
-  strophe-model/     Framework-independent session, tracks, layers, history
-  strophe-headless/  Scripted engine harness
-  strophe-genet/    Genet/winit desktop host and one-screen recorder UI
+  hocket-engine/    Firewheel graph, capture, click, media-store abstraction
+  hocket-model/     Framework-independent session, tracks, layers, history
+  hocket-headless/  Scripted engine harness
+  hocket-genet/    Genet/winit desktop host and one-screen recorder UI
 design_docs/         Product reference and active implementation plans
 ```
 
-`strophe-model` owns durable session truth. `strophe-engine` projects that
-truth into a Firewheel runtime. `strophe-genet` owns host interaction and does
+`hocket-model` owns durable session truth. `hocket-engine` projects that
+truth into a Firewheel runtime. `hocket-genet` owns host interaction and does
 not become a second session model.
 
 ## Build
 
 The workspace expects the sibling `woodshed` checkout because
-`strophe-engine` uses its shared `audio-primitives` crate.
+`hocket-engine` uses its shared `audio-primitives` crate.
 
 ```text
-cargo run -p strophe-genet
-cargo run -p strophe-headless
-cargo test -p strophe-model
-cargo test -p strophe-engine
+cargo run -p hocket-genet
+cargo run -p hocket-headless
+cargo test -p hocket-model
+cargo test -p hocket-engine
 ```
 
 ## License

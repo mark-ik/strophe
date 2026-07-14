@@ -26,8 +26,8 @@ every session-structure gesture must remain visible to history.
 
 ## Progress
 
-- 2026-07-09: Landed the scope above. `cargo test -p strophe-model` passed
-  with 32 unit tests and 2 integration tests; `cargo check -p strophe-genet`
+- 2026-07-09: Landed the scope above. `cargo test -p hocket-model` passed
+  with 32 unit tests and 2 integration tests; `cargo check -p hocket-genet`
   passed. The repository-wide format check still proposes unrelated preexisting
   formatting changes outside this slice.
 
@@ -36,4 +36,4 @@ every session-structure gesture must remain visible to history.
 The local-project bundle work moved to
 [2026-07-09_muniment-project-store_plan.md](2026-07-09_muniment-project-store_plan.md).
 It uses Muniment's backend seam rather than inventing a filesystem protocol in
-Strophe.
+Hocket.

@@ -2,16 +2,16 @@
 
 ## Goal
 
-Give Strophe one portable persistence path before adding save/open controls,
+Give Hocket one portable persistence path before adding save/open controls,
 export, or peer transfer. Reuse Muniment's backend seam rather than create a
-second filesystem protocol inside Strophe.
+second filesystem protocol inside Hocket.
 
 ## Design
 
-- `strophe-model::ProjectBundle` remains the versioned session/history manifest.
-- `strophe-engine::ProjectStore<B>` stores that manifest at `strophe/manifest`
-  and audio at `strophe/media/<MediaRef>` over a Muniment `Backend`.
-- `MediaRef` remains Strophe's sample-rate-aware BLAKE3 identity. Muniment's
+- `hocket-model::ProjectBundle` remains the versioned session/history manifest.
+- `hocket-engine::ProjectStore<B>` stores that manifest at `hocket/manifest`
+  and audio at `hocket/media/<MediaRef>` over a Muniment `Backend`.
+- `MediaRef` remains Hocket's sample-rate-aware BLAKE3 identity. Muniment's
   generic `BlobStore` is intentionally not used directly because it hashes raw
   encoded bytes and would create a second identity for the same capture.
 - Saving fails before writing when a manifest references unavailable media.
@@ -26,7 +26,7 @@ second filesystem protocol inside Strophe.
 - Missing media has distinct save and load behavior.
 - Corrupt media is rejected rather than silently played.
 - A future Genet host can choose Redb on desktop or OPFS in a browser without
-  changing Strophe model or media semantics.
+  changing Hocket model or media semantics.
 
 ## Progress
 

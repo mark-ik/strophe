@@ -1,8 +1,8 @@
-//! Strophe audio engine, built on [Firewheel](https://github.com/BillyDM/Firewheel) 0.10.
+//! Hocket audio engine, built on [Firewheel](https://github.com/BillyDM/Firewheel) 0.10.
 //!
 //! ## Architecture
 //!
-//! - `strophe-model` is the *authority* for session truth (tracks,
+//! - `hocket-model` is the *authority* for session truth (tracks,
 //!   layers, history, phrase pool).
 //! - This crate is the *runtime*: a Firewheel audio graph that
 //!   plays/captures/mixes the currently projected session state.
@@ -65,7 +65,7 @@ use hocket_model::TrackId;
 use audio_primitives::{OnsetDetector, estimate_bpm};
 
 // Re-export model types that appear in this crate's public API so
-// downstream consumers don't need a separate strophe-model dep just
+// downstream consumers don't need a separate hocket-model dep just
 // to construct a LayerKey.
 pub use hocket_model::TrackId as ModelTrackId;
 
@@ -120,7 +120,7 @@ pub const VOICE_POOL_SIZE: usize = 32;
 /// onset history bound.
 const ONSET_HISTORY: usize = 32;
 
-/// Engine-side identifier for a model `Layer`. Strophe-model uses
+/// Engine-side identifier for a model `Layer`. Hocket-model uses
 /// `(TrackId, layer_index)` to address layers; the engine maps each
 /// such key to one voice in the pool.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -138,7 +138,7 @@ impl LayerKey {
     }
 }
 
-/// The Strophe audio engine. Owns the Firewheel context (which in
+/// The Hocket audio engine. Owns the Firewheel context (which in
 /// turn owns the cpal stream after `start_stream`).
 ///
 /// Not `Send` (cpal streams aren't `Send` on most platforms).
@@ -381,7 +381,7 @@ impl Engine {
     /// per-frame DSP and the onset history stays empty. Turning it off
     /// also clears any accumulated onsets.
     ///
-    /// First Strophe consumer of the shared
+    /// First Hocket consumer of the shared
     /// [`audio_primitives::OnsetDetector`]; the substrate for audio
     /// tap-tempo and FT3c latency calibration.
     pub fn set_onset_detection(&mut self, enabled: bool) {

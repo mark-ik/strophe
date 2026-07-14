@@ -3,11 +3,11 @@
 ## Goal
 
 Let a performer choose the local input and output device without making
-machine-specific hardware part of a shared Strophe project.
+machine-specific hardware part of a shared Hocket project.
 
 ## Design
 
-- `strophe-engine` enumerates Firewheel CPAL devices as stable string IDs plus
+- `hocket-engine` enumerates Firewheel CPAL devices as stable string IDs plus
   display names. `AudioDeviceSelection` keeps those IDs host-local.
 - The Genet transport has separate Input and Output dropdowns. `System default`
   remains an explicit option rather than a hidden fallback.

@@ -1,6 +1,6 @@
 # Documentation Policy
 
-Adapted from Woodshed's DOC_POLICY for Strophe's narrower scope. This
+Adapted from Woodshed's DOC_POLICY for Hocket's narrower scope. This
 project has a small surface (audio engine + UI + sync) and one
 maintainer, so the policy is intentionally light.
 

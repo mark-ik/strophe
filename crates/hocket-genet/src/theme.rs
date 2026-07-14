@@ -1,4 +1,4 @@
-//! The Strophe sheet: the warm dim-practice-room palette + the one-screen
+//! The Hocket sheet: the warm dim-practice-room palette + the one-screen
 //! loop-recorder layout (pass-the-mic rail | loop table | transport),
 //! ported from the 2026-07-08 UI concept. Flexbox throughout (genet's
 //! exercised path); per-lane owner colour rides a `--voice` custom

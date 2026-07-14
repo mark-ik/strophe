@@ -17,8 +17,8 @@ before any other doc in this directory.
 - [2026-07-08_genet_host_refactor_plan.md](2026-07-08_genet_host_refactor_plan.md)
   — **LANDED.** UI rebuilt fresh on `xilem_serval` (the one-screen loop-recorder
   design, not a Masonry port) with `chisel` leaf waveforms/meters and the
-  `strophe_engine` spine wired in. The Masonry app + the `mark-ik/xilem` fork
-  are deleted family-wide (strophe + woodshed). Deferred follow-ups listed in
+  `hocket_engine` spine wired in. The Masonry app + the `mark-ik/xilem` fork
+  are deleted family-wide (hocket + woodshed). Deferred follow-ups listed in
   the plan's Progress log.
 - [2026-07-09_honest-local-session_plan.md](2026-07-09_honest-local-session_plan.md)
   - **LANDED.** Empty-session startup, history-backed track creation, real
@@ -26,7 +26,7 @@ before any other doc in this directory.
   no backing subsystem. Persistence and sync remain separately scoped.
 - [2026-07-09_muniment-project-store_plan.md](2026-07-09_muniment-project-store_plan.md)
   - **LANDED.** Local project persistence over Muniment's generic backend seam,
-  with a Genet-host Redb API. The manifest retains Strophe's session/history
+  with a Genet-host Redb API. The manifest retains Hocket's session/history
   semantics and media keeps its existing `MediaRef` identity.
 - [2026-07-09_project-controls_plan.md](2026-07-09_project-controls_plan.md)
   - **LANDED.** Native desktop open/save controls over the Muniment store, with
@@ -63,7 +63,7 @@ before any other doc in this directory.
 These principles apply to AI-assisted work on this project. Update this
 section whenever a durable working insight emerges from a session.
 
-- **The model is framework-agnostic.** `strophe-model` does not depend
+- **The model is framework-agnostic.** `hocket-model` does not depend
   on cpal, xilem, masonry, or any UI/audio framework. The audio
   engine, the UI, and the sync layer all consume it as a peer.
 - **The UI rides Genet, not Masonry (from 2026-07-08).** The active host is
@@ -93,7 +93,7 @@ section whenever a durable working insight emerges from a session.
   feature must answer: *does this serve the passing-the-mic
   workflow?* If yes, consider taking it. If it serves traditional
   DAW workflows instead, defer it or skip it. The arrange view is
-  the single feature that could turn Strophe into something a person
+  the single feature that could turn Hocket into something a person
   uses *instead of* a DAW — add it deliberately and only after the
   loop-recorder identity is solid. The failure mode to avoid: "loop
   recorder that grew DAW features and now is worse than both."
@@ -103,7 +103,7 @@ section whenever a durable working insight emerges from a session.
   nodes, mix bus, input capture node, optional click node. **On
   crates.io** at `firewheel-graph` 0.10.x — pin a version, only
   path-dep if unreleased fixes are needed.
-- **strophe-model is the authority; Firewheel is the runtime.**
+- **hocket-model is the authority; Firewheel is the runtime.**
   Session truth lives in the model; the audio graph plays the
   *projected state*. Don't let runtime concerns leak back into the
   model (no transport-dominance, no graph topology bleed-through).
@@ -123,7 +123,7 @@ section whenever a durable working insight emerges from a session.
 
 ## Reference reading
 
-Hand-picked technical references that inform Strophe's architecture:
+Hand-picked technical references that inform Hocket's architecture:
 
 **Realtime audio engineering:**
 - Bencina, ["Real-time audio programming 101: time waits for nothing"](http://www.rossbencina.com/code/real-time-audio-programming-101-time-waits-for-nothing)
@@ -144,10 +144,18 @@ Hand-picked technical references that inform Strophe's architecture:
 **Architecture references:**
 - [Firewheel design doc](https://github.com/BillyDM/Firewheel/blob/main/DESIGN_DOC.md)
 - [CLAP spec](https://github.com/free-audio/clap) — headers themselves are the spec
-- **Share with Woodshed, don't fork.** Strophe consumes focused shared crates
+- **Share with Woodshed, don't fork.** Hocket consumes focused shared crates
   such as `audio-primitives` via path dependency. Keep application-level
   dependencies one-way and extract further only when both projects need them.
-- **Merely family naming.** Crates use `strophe-*`. The bare
-  `strophe` crate name on crates.io is squatted by a dead 2016 redirect;
-  this is acceptable because distribution is via itch.io/Gumroad and
-  the workspace doesn't need to publish the umbrella name.
+- **Merely family naming.** Crates use `hocket-*`. The bare `hocket` name is
+  claimed on crates.io (0.0.1, 2026-07-14), so the umbrella name is ours to
+  publish under when we want it.
+- **The project was named Strophe until 2026-07-14.** A hocket splits one
+  melodic line between voices, each sounding while the others rest — the
+  pass-the-mic model in a word. The rename also freed us from the bare
+  `strophe` crate name, squatted since 2016 by a dead redirect. Durable
+  strings changed with it: the project extension is `.hocket`, the bundle
+  keys are `hocket/manifest` + `hocket/media/`, the hand-off salt is
+  `hocket/handoff/v2/`, and the host identity lives under a `Hocket` data
+  root. A one-time migration re-seals a pre-rename local identity so an
+  existing fingerprint survives; no other legacy path is kept.

@@ -1,8 +1,8 @@
-# Strophe Repository Guide
+# Hocket Repository Guide
 
 ## Product
 
-Strophe is a cross-platform loop recorder with asynchronous turn-taking. The
+Hocket is a cross-platform loop recorder with asynchronous turn-taking. The
 core musical gesture is adding a layer to a short loop, then handing a session
 to another person when sharing is available. It is not an Ableton-shaped DAW
 and it is not a real-time network jam tool.
@@ -19,25 +19,25 @@ Read `design_docs/DOC_README.md` before planning or changing subsystem scope.
 
 ```
 crates/
-  strophe-model/     Session and history authority; framework independent
-  strophe-engine/    Firewheel capture, playback, click, and media abstraction
-  strophe-headless/  Scripted audio-engine harness
-  strophe-genet/    Genet/winit application host and recorder UI
+  hocket-model/     Session and history authority; framework independent
+  hocket-engine/    Firewheel capture, playback, click, and media abstraction
+  hocket-headless/  Scripted audio-engine harness
+  hocket-genet/    Genet/winit application host and recorder UI
 ```
 
-Run the desktop application with `cargo run -p strophe-genet`. The retired
-Masonry application and `strophe-widgets` crate are not part of this workspace.
+Run the desktop application with `cargo run -p hocket-genet`. The retired
+Masonry application and `hocket-widgets` crate are not part of this workspace.
 
 The sibling `../woodshed/crates/audio-primitives` path dependency provides
-shared pure DSP helpers. Do not couple Strophe to a Woodshed application crate.
+shared pure DSP helpers. Do not couple Hocket to a Woodshed application crate.
 
 ## Boundaries
 
-- Keep `strophe-model` independent of UI and audio frameworks. Session edits
+- Keep `hocket-model` independent of UI and audio frameworks. Session edits
   that must survive undo or synchronization belong in `Edit` and `History`.
-- Keep `strophe-engine` as a runtime projection. It can own real-time graph and
+- Keep `hocket-engine` as a runtime projection. It can own real-time graph and
   device concerns, but not authoritative session state.
-- Keep `strophe-genet` thin. Host-local presentation state is acceptable;
+- Keep `hocket-genet` thin. Host-local presentation state is acceptable;
   session, media, and collaboration semantics are not.
 - Build local durability before peer synchronization: a peer cannot reliably
   import or share a session that the originating host cannot reopen.

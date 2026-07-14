@@ -27,6 +27,6 @@ can offer a real branch rather than forcing one side's work to disappear.
 
 ## Progress
 
-- 2026-07-10: **LANDED.** `strophe-model` retains branches, checks out through
+- 2026-07-10: **LANDED.** `hocket-model` retains branches, checks out through
   common ancestors, and validates graph integration. Focused branch/integration
   tests and the existing model validation suite pass.

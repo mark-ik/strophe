@@ -1,6 +1,6 @@
 # Project Description
 
-- Strophe is a cross-platform loop recorder with turn-based collaboration.
+- Hocket is a cross-platform loop recorder with turn-based collaboration.
 
 ## What it is
 
@@ -53,7 +53,7 @@ a mic around in a circle and building loops turn by turn!
 - Linear arrangement-first DAW workflow (Ableton/Bitwig/Logic). The
   arrangement is downstream of the loop library, not the primary
   surface.
-- Mixer-first workflow with deep bus/send/insert structure. Strophe is
+- Mixer-first workflow with deep bus/send/insert structure. Hocket is
   a phrase sampler; mixing happens later, elsewhere, by exporting
   loops or arrangements.
 - Real-time multiplayer jamming over the network as the primary composition model. Sequential
@@ -68,7 +68,7 @@ a mic around in a circle and building loops turn by turn!
 
 ## Major Features
 
-strophe should be configurable: track count, layer semantics (sum vs. select), 
+hocket should be configurable: track count, layer semantics (sum vs. select), 
 bar length, count-in behavior, click preference, and other session-level settings.
 The simple looper default for v1 is the looper-pedal profile: 
 4 tracks, layered overdub, variable-length, optional master clock. 
@@ -153,27 +153,27 @@ who want exactly that workflow (like myself).
 
 ## Relationship to Woodshed and Mere
 
-Strophe is the **pressure vessel for the reusable audio layer** across
-the Merely family. Hard audio engineering happens in Strophe first;
+Hocket is the **pressure vessel for the reusable audio layer** across
+the Merely family. Hard audio engineering happens in Hocket first;
 when pieces stabilize, they get extracted to shared crates that
 Woodshed and Mere consume independently. Planned shape:
 
 - `audio-primitives` — waveform peaks, meter ballistics, onset / tap tempo,
   latency calibration, and other pure sample/timing kernels
-- audio Chisel leaves — incubate in Strophe and promote only when Woodshed or
+- audio Chisel leaves — incubate in Hocket and promote only when Woodshed or
   another consumer needs the same retained geometry
 - `audio-devices` — curated Firewheel node wrappers (gain/EQ/reverb/
   delay/compressor) + parameter schemas
 
-Strophe itself keeps the product-specific bits — layered loop model,
+Hocket itself keeps the product-specific bits — layered loop model,
 turn-taking, hand-off protocol, branch/merge UX — which never leave
-the Strophe crate.
+the Hocket crate.
 
-Dependency direction is one-way: Strophe → shared audio crates;
-Woodshed and Mere → shared audio crates. Strophe is not "Mere's audio
-subsystem," and Woodshed is not "Strophe-lite." Different products,
+Dependency direction is one-way: Hocket → shared audio crates;
+Woodshed and Mere → shared audio crates. Hocket is not "Mere's audio
+subsystem," and Woodshed is not "Hocket-lite." Different products,
 overlapping audio primitives.
 
-Extraction trigger: when first duplication appears between Strophe
-and Woodshed (or Strophe and Mere). Don't pre-emptively create empty
+Extraction trigger: when first duplication appears between Hocket
+and Woodshed (or Hocket and Mere). Don't pre-emptively create empty
 crates.

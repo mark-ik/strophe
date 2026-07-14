@@ -12,13 +12,13 @@ this section (not the FTs) when direction changes.
 
 ### Identity and scope
 
-- **Strophe is a loop-first composition tool, not a DAW.** The
+- **Hocket is a loop-first composition tool, not a DAW.** The
   passing-the-mic-in-a-circle workflow is the protection against
   feature drift. Every proposed feature must answer: *does this serve
   the passing-the-mic workflow?* — if yes, consider; if it serves
   traditional DAW workflows instead, defer or skip.
 - **The arrange view is the canary for scope creep.** Adding it
-  changes what Strophe *is*. Add it deliberately and only after the
+  changes what Hocket *is*. Add it deliberately and only after the
   loop-recorder identity is solid, or you'll have a product that's
   neither thing well. (See DAW extension ladder below.)
 - **Layered tracks with per-track playback mode.** A track is a stack
@@ -54,9 +54,9 @@ this section (not the FTs) when direction changes.
   2026-03-17. Pin a crates.io version; only path-dep if we need
   unreleased fixes. *(Prior plan text said "not yet on crates.io" —
   that was wrong. Corrected here.)*
-- **strophe-model is the authority; Firewheel is the runtime.**
+- **hocket-model is the authority; Firewheel is the runtime.**
   Session, tracks, layers, history, turn state, media refs all live
-  in `strophe-model`. Firewheel just plays/captures/mixes the
+  in `hocket-model`. Firewheel just plays/captures/mixes the
   currently projected state. This matches Firewheel's "app/game state
   sends events into the audio graph" model far better than a
   transport-dominant DAW engine would.
@@ -64,12 +64,12 @@ this section (not the FTs) when direction changes.
   from FT1's click engine. **Replaced at FT3b-prime** (not FT3b) —
   pivot now, before FT3b hardens around the Woodshed engine boundary.
 - **No plugin hosting for v1.** No CLAP, no VST3, no LV2, no AU, no
-  plugin GUI hosting. Strophe v1 ships curated **first-party Rust
+  plugin GUI hosting. Hocket v1 ships curated **first-party Rust
   devices** on Firewheel nodes, with **schema-driven UI** generated
   from parameter metadata. firewheel-extra's CLAP host is marked
   TODO in Firewheel's own design doc; CLAP isn't possible in WASM
-  anyway; plugin hosting drags DAW-shaped product gravity Strophe
-  shouldn't have. See `memory/project_strophe_no_clap_doctrine.md`.
+  anyway; plugin hosting drags DAW-shaped product gravity Hocket
+  shouldn't have. See `memory/project_hocket_no_clap_doctrine.md`.
 - **Web is gated, not free.** `firewheel-web-audio` needs wasm
   threading/atomics, nightly + `build-std`, and COOP/COEP deploy
   headers. Real, but a proof gate — flagged for FT11.
@@ -132,13 +132,13 @@ loop-first.**
 ### Shared crates plan
 
 Two shared crates live in the woodshed repo, consumed by both Woodshed
-and Strophe (cross-repo path-deps). **Extract when there's something
+and Hocket (cross-repo path-deps). **Extract when there's something
 to share.**
 
 - **`audio-widgets`** — the UI layer (Masonry/Vello). As of 2026-05-19
   ships `waveform_view` + `compute_peaks` (extracted at FT5) and a
   `theme` module (spacing `SP_*`, type scale `TS_*`, `mono_family()`,
-  base `Palette` + `ThemeMode`). `strophe-widgets` re-exports both.
+  base `Palette` + `ThemeMode`). `hocket-widgets` re-exports both.
   Product-specific colors (waveform fill, fretboard) stay per-host.
   Future: fader / knob / meter / transport-button.
 - **`audio-primitives`** — the pure-DSP layer (zero deps, no engine/UI).
@@ -146,10 +146,10 @@ to share.**
   + `estimate_bpm`), `calibration` (`estimate_latency_from_pairs`).
   Drivers (cpal `Analyzer`, Firewheel graph, live calibration session)
   stay in the consuming crate. Future candidates: WAV I/O (`SampleBank`,
-  Strophe FT8), MIDI clock sync.
+  Hocket FT8), MIDI clock sync.
 
 The doctrine's third name, `audio-devices` (cpal/MIDI I/O), is not yet
-extracted — Woodshed is cpal-direct and Strophe is on Firewheel, so the
+extracted — Woodshed is cpal-direct and Hocket is on Firewheel, so the
 device layer hasn't found a shared shape worth factoring out.
 
 ### Visual design conventions (apply during UI work)
@@ -175,8 +175,8 @@ Establish the workspace and a buildable skeleton with no functional
 behavior yet.
 
 **Tasks:**
-- Workspace `Cargo.toml` with five crates: `strophe`, `strophe-engine`,
-  `strophe-model`, `strophe-widgets`, `strophe-xilem`
+- Workspace `Cargo.toml` with five crates: `hocket`, `hocket-engine`,
+  `hocket-model`, `hocket-widgets`, `hocket-xilem`
 - Each crate has a stub `lib.rs` (or `main.rs` for the binary) that
   compiles
 - Path-dep on sibling `../woodshed/crates/woodshed-audio` wired but
@@ -187,7 +187,7 @@ behavior yet.
 **Validation:**
 - `cargo build` succeeds workspace-wide on Mark's primary Windows
   laptop
-- `cargo run -p strophe` prints a placeholder line and exits cleanly
+- `cargo run -p hocket` prints a placeholder line and exits cleanly
 - No `unsafe`, no warnings
 
 ### Feature Target 1: Click-track engine
@@ -197,7 +197,7 @@ running through cpal with sample-accurate scheduling and a configurable
 tempo + time signature + bar count.
 
 **Tasks:**
-- `strophe-engine`: cpal output stream, voice mixer, click generator
+- `hocket-engine`: cpal output stream, voice mixer, click generator
   (reusing or wrapping `woodshed-audio`'s `Sound::Click` if direct
   reuse is clean; otherwise local)
 - `Transport` type: tempo, time signature, bars per phrase, playing
@@ -221,9 +221,9 @@ tempo + time signature + bar count.
 - CPU stays under 5% on the Windows laptop — to be measured next
   session via Task Manager during a long-running demo (not blocking)
 
-### Feature Target 2: Strophe-model (Tracks + Layers + History)
+### Feature Target 2: Hocket-model (Tracks + Layers + History)
 
-The nondestructive data substrate. `strophe-model` ships before the
+The nondestructive data substrate. `hocket-model` ships before the
 recording surface so the engine has somewhere to put captured audio.
 
 **Tasks (as landed):**
@@ -263,7 +263,7 @@ recording surface so the engine has somewhere to put captured audio.
   (`divergent_histories_union_deterministically` — three properties:
   no NodeId collisions across branches, BTreeMap union is
   order-independent, parent chains both reach the shared ancestor)
-- `strophe-model` has zero deps on cpal, xilem, masonry, winit ✅
+- `hocket-model` has zero deps on cpal, xilem, masonry, winit ✅
   (Cargo.toml: serde + postcard + uuid only)
 
 ### Feature Target 3: Phrase capture (record one variation)
@@ -281,9 +281,9 @@ Storage, hashing, capture-state machine, and `Edit::CapturePhrase`
 commit, all in-memory and test-validatable.
 
 **Tasks:**
-- `strophe-engine::media`: `MediaStore` trait + `InMemoryStore` impl;
+- `hocket-engine::media`: `MediaStore` trait + `InMemoryStore` impl;
   BLAKE3-shaped content addressing (`hash_buffer`); idempotent `put`
-- `strophe-engine::capture`: `Capture` state machine
+- `hocket-engine::capture`: `Capture` state machine
   (`Idle → Recording → Complete`); `feed`/`feed_slice`/`take_completed`
   API; no cpal coupling
 - Integration test: synthesized sine wave → Capture → MediaStore →
@@ -304,14 +304,14 @@ commit, all in-memory and test-validatable.
 #### Feature Target 3b-prime — Firewheel runtime proof ⭐ (next)
 
 A focused proof of the new spine: build a minimal Firewheel graph
-and validate it carries Strophe's needs before deeper integration.
+and validate it carries Hocket's needs before deeper integration.
 Per Mark's 2026-05-18 directive: *pivot now, before FT3b hardens
 around the current Woodshed/cpal engine boundary.*
 
 **Tasks:**
 - Pin `firewheel` / `firewheel-graph` from crates.io (latest stable
   on the 0.10.x line)
-- Build a minimal Firewheel graph in `strophe-engine`:
+- Build a minimal Firewheel graph in `hocket-engine`:
   - Click node (port the click sound from `woodshed_audio::Sound::Click`
     to a Firewheel custom node — small, ~50 LOC)
   - Audio output node (Firewheel's default backend)
@@ -319,9 +319,9 @@ around the current Woodshed/cpal engine boundary.*
     `Capture` state machine from FT3a)
   - One sample-player node for replaying a captured phrase
   - One meter node (peak/RMS) on the output bus
-- Add commands to `strophe-engine::Handle` for: start/stop transport,
+- Add commands to `hocket-engine::Handle` for: start/stop transport,
   arm capture, play captured phrase
-- Retire the `SequencerEngine` wrap from `strophe-engine`
+- Retire the `SequencerEngine` wrap from `hocket-engine`
 - The demo binary scripts: 4s click, arm capture, capture 1 phrase
   off real input, play it back as a sample resource
 
@@ -362,7 +362,7 @@ sum into the track's mixer.
   fed from `Layer` state
 - Re-evaluate the rtrb lock-free upgrade now that input + output are
   both producing real-time pressure (deferred from FT1). Firewheel
-  itself is "no mutexes" by design, so the Strophe-side boundary is
+  itself is "no mutexes" by design, so the Hocket-side boundary is
   the question — what crosses the audio thread?
 
 **Validation:**
@@ -392,7 +392,7 @@ the captured buffer.
 - After calibration, a captured click-on-the-beat lands at sample 0
   (±1 sample) of the captured buffer
 
-### Feature Target 4: Strophe-xilem app shell
+### Feature Target 4: Hocket-xilem app shell
 
 Minimum Xilem app: window, tab/header, transport bar, click controls,
 and a track-strip column. Track-strip rendering is **profile-aware**:
@@ -402,11 +402,11 @@ N (UI-conventional 4) variation slots with the currently-active
 slot highlighted.
 
 **Tasks:**
-- `strophe` binary = the Xilem app (mirrors woodshed-xilem's pattern).
-  *(Renamed 2026-05-18: the former `strophe-xilem` crate is now
-  `strophe` — the binary users run — and the former scripted-demo
-  `strophe` crate is now `strophe-headless`. `cargo run -p strophe`
-  launches the app; `cargo run -p strophe-headless` runs the audio
+- `hocket` binary = the Xilem app (mirrors woodshed-xilem's pattern).
+  *(Renamed 2026-05-18: the former `hocket-xilem` crate is now
+  `hocket` — the binary users run — and the former scripted-demo
+  `hocket` crate is now `hocket-headless`. `cargo run -p hocket`
+  launches the app; `cargo run -p hocket-headless` runs the audio
   demo.)*
 - Top-level state: handle to engine, handle to model, current
   selection, current session profile
@@ -433,7 +433,7 @@ Deeler profile).
 
 **Tasks:**
 - Peak-file generator (min/max/RMS at multiple LOD tiers) in
-  `strophe-widgets`
+  `hocket-widgets`
 - `WaveformWidget`: Masonry custom widget, `paint(ctx, props, painter)`
   emits a Vello path over the peak data
 - Wire into layer / slot rendering: filled cell shows its waveform
@@ -472,13 +472,13 @@ Deeler mode, duplicate, etc.). All edits commit history nodes.
 The primary surface **in the Deeler profile**: a grid showing which
 variation plays per track. Clicking switches the active layer, the
 engine schedules the change for the next bar boundary. Maps directly
-onto `Edit::SelectActiveLayer` in `strophe-model`.
+onto `Edit::SelectActiveLayer` in `hocket-model`.
 
 In the looper-pedal profile this view is hidden; that profile's
 primary surface is the per-track layer stack (per FT4).
 
 **Note on sections.** Deeler itself has no saved sections — variation
-picking is live toggling only. Strophe deliberately extends past
+picking is live toggling only. Hocket deliberately extends past
 Deeler with named sections (snapshots of "which layer is active per
 track") for instant recall, with the strict-cap caveat that sections
 don't drift into arrange-view territory (that's FT10).
@@ -520,7 +520,7 @@ The collaboration moat. Push session state to a peer; the peer pulls
 and continues.
 
 **Tasks:**
-- `strophe-sync` crate (new, added in this target): wraps Moothold for
+- `hocket-sync` crate (new, added in this target): wraps Moothold for
   content-addressed blob storage and Murm for session-state sync
 - Hand-off protocol: serialize the history graph to Moothold blobs,
   generate a hand-off token (an addressable history-node pointer),
@@ -531,7 +531,7 @@ and continues.
 - Accept: merge incoming history into the local session
 
 **Validation:**
-- Two instances of Strophe on the same LAN (one Windows, one Fedora)
+- Two instances of Hocket on the same LAN (one Windows, one Fedora)
   hand off a session both directions
 - A Phrase recorded on one side appears on the other after hand-off
 - Conflict case: both sides edit different tracks, then hand off
@@ -543,9 +543,9 @@ and continues.
 Sequence named sections into a song. Export rendered audio.
 
 **Tasks:**
-- `Arrangement` type in `strophe-model`: ordered list of (section,
+- `Arrangement` type in `hocket-model`: ordered list of (section,
   bar-count)
-- `ArrangementWidget` in `strophe-widgets`: timeline-shaped, but
+- `ArrangementWidget` in `hocket-widgets`: timeline-shaped, but
   bounded — one row per arrangement entry, not a continuous canvas
 - Offline render: `woodshed-audio::offline::render_pattern`-shaped
   function for arrangements
@@ -559,16 +559,16 @@ Sequence named sections into a song. Export rendered audio.
 
 ### Feature Target 11: Web target (xilem_web + AudioWorklet)
 
-Strophe in a browser. Native and web build the same model and the
-same `strophe-engine` API; the difference is the `AudioBackend` impl
+Hocket in a browser. Native and web build the same model and the
+same `hocket-engine` API; the difference is the `AudioBackend` impl
 and the widget render path (Masonry → xilem_web SVG).
 
 **Tasks:**
-- `trait AudioBackend` introduced retroactively in `strophe-engine`
+- `trait AudioBackend` introduced retroactively in `hocket-engine`
   (defer to this target — premature abstraction earlier)
 - cpal impl on native, AudioWorklet impl on web
 - File backend impl for OPFS (web)
-- `strophe-widgets` paint paths re-emitted as xilem_web SVG using
+- `hocket-widgets` paint paths re-emitted as xilem_web SVG using
   the same `peniko`/`kurbo` geometry
 - COOP/COEP deploy doc
 - Self-hosted demo
@@ -720,7 +720,7 @@ installers, Android via cargo-apk.
   waveform. Expanding the strip now renders each layer's own waveform
   (shorter `LAYER_WAVEFORM_H`) beside its mute/gain. The compact shape
   is literally the stacked overdub summed.
-- Build clean (0.6s); strophe-model 30+2, strophe-engine 15+3 green.
+- Build clean (0.6s); hocket-model 30+2, hocket-engine 15+3 green.
   Audio/visual paths want a runtime eyeball.
 
 ### Session 2026-05-20 — app shell scaffold (surfaces + profile-aware strips)
@@ -728,9 +728,9 @@ installers, Android via cargo-apk.
 - **Decomposed the flat `main.rs` prototype into a surface-based shell.**
   `main.rs` now owns `AppState`, the action helpers the views call, and
   the engine tick/capture glue; view composition lives in `src/view/`.
-  Decision (Mark): Strophe-specific views live in the **app crate**, not
-  `strophe-widgets` — they read `AppState`, so putting them in the
-  widgets crate would be circular. `strophe-widgets` stays for
+  Decision (Mark): Hocket-specific views live in the **app crate**, not
+  `hocket-widgets` — they read `AppState`, so putting them in the
+  widgets crate would be circular. `hocket-widgets` stays for
   data-parameterized widgets.
 - **Surfaces:** a persistent `transport` bar (record/stop, status,
   output meter, surface nav) over one of `Tracks` / `Combination` /
@@ -764,7 +764,7 @@ installers, Android via cargo-apk.
   - **Master clock / count-in / click / track-count** settings have no
     backing model fields yet — Settings shows what exists; those land
     when the model grows the fields.
-- Compiles clean (5.4s); strophe-engine 15+3, strophe-model 30+2 tests
+- Compiles clean (5.4s); hocket-engine 15+3, hocket-model 30+2 tests
   green. UI interactions (mute/gain/variation-switch audio, profile
   switch) want a runtime eyeball.
 
@@ -791,9 +791,9 @@ installers, Android via cargo-apk.
   - `audio-widgets`: a **`meter_view`** (read-only level bar, same
     canvas-closure idiom as `waveform_view`) + `db_to_norm` (linear-
     in-dB mapping). 10 tests green.
-- **Strophe is a real consumer:** the app now draws **live stereo
+- **Hocket is a real consumer:** the app now draws **live stereo
   meter bars** from the shared `meter_view` (the text dB readout
-  stays for precise values), and `strophe-widgets` re-exports
+  stays for precise values), and `hocket-widgets` re-exports
   `combobox` + `meter_view`. Full workspace builds (10.3s).
 - **Borrow strategy:** chose to *reimplement* knob/fader/meter in our
   canvas idiom rather than vendor `xilem_synth_widgets` — avoids
@@ -827,17 +827,17 @@ installers, Android via cargo-apk.
   structure (new crate, not growing `audio-widgets`) and the first
   scope (click + onset + calibration) via the scoping question.
 - **Direction note:** this extraction pulls *from Woodshed's mature
-  DSP into* the shared layer, the reverse of the doctrine's "Strophe
+  DSP into* the shared layer, the reverse of the doctrine's "Hocket
   incubates → promotes." That's fine — the shared layer takes the best
   of either product; Woodshed had already incubated onset/calibration/
   click, so promoting them is the same move in the other direction.
 - **Three modules extracted:**
   - `click` — `click_sample` (per-sample sine-burst+decay core) +
     `render_click_bar` (full-bar buffer). Killed a *literal*
-    duplication: Strophe's `render_click_loop` was annotated "ported
+    duplication: Hocket's `render_click_loop` was annotated "ported
     from `woodshed_audio::Sound::Click`." Now both call the shared
     synth. Woodshed's `Sound::Click` voice renders per-sample via
-    `click_sample`; Strophe pre-renders a bar via `render_click_bar`.
+    `click_sample`; Hocket pre-renders a bar via `render_click_bar`.
   - `onset` — `OnsetDetector` (streaming energy-envelope transient
     detection) + `estimate_bpm` (median-interval tempo). The pure
     core only; Woodshed's `OnsetAnalyzer`/`OnsetHandle` (cpal
@@ -846,7 +846,7 @@ installers, Android via cargo-apk.
   - `calibration` — `estimate_latency_from_pairs` + `count_matches` +
     `MATCH_WINDOW` (click↔onset pairing → median round-trip latency).
     Woodshed's `CalibrationSession` (drives the live run, owns the
-    engine handles) stayed. **This is what Strophe FT3c needs** —
+    engine handles) stayed. **This is what Hocket FT3c needs** —
     latency calibration is now a shared primitive away.
 - **Coupling fix:** Woodshed's `OnsetHandle` wrote `OnsetDetector`'s
   private `threshold_multiplier` field directly (same-module access).
@@ -857,13 +857,13 @@ installers, Android via cargo-apk.
   estimate_latency_from_pairs, MATCH_WINDOW}` resolve unchanged. Pure
   tests moved with the code.
 - **Verified:** `audio-primitives` 24 tests, `woodshed-audio` 124
-  tests, `strophe-engine` 15+3 tests all green; full Strophe workspace
+  tests, `hocket-engine` 15+3 tests all green; full Hocket workspace
   builds (22.8s). `woodshed-xilem` currently fails to compile, but on a
   *pre-existing, unrelated* WIP — Mark's in-flight user-themes feature
   (`Settings.user_themes`/`active_user_theme`, `set_user_theme`), not
   anything this extraction touched.
-- **First Strophe consumer of the shared `onset` primitive.** Wired an
-  `OnsetDetector` into `strophe-engine`: fed by the mic samples the
+- **First Hocket consumer of the shared `onset` primitive.** Wired an
+  `OnsetDetector` into `hocket-engine`: fed by the mic samples the
   engine already drains each `tick` (in `drain_and_advance_capture`),
   gated behind `set_onset_detection(bool)` (off by default, so the
   per-frame DSP only runs when a tap-tempo / calibration session needs
@@ -871,31 +871,31 @@ installers, Android via cargo-apk.
   `estimate_bpm`), `detected_onset_count()`, `reset_onsets()`. Proves
   the onset extraction is reusable across the Firewheel engine (the
   click reuse was already proven; onset/calibration weren't exercised
-  by Strophe until now). No UI yet; substrate for FT3c + tap-tempo.
+  by Hocket until now). No UI yet; substrate for FT3c + tap-tempo.
 - **Where the extraction stopped, and why.** The remaining woodshed
   audio pieces don't (yet) justify extraction: `SampleBuffer` + its
-  destructive ops (`apply_gain`/`normalize`/`reverse`) have *no* Strophe
-  consumer — Strophe applies gain non-destructively via Firewheel's
+  destructive ops (`apply_gain`/`normalize`/`reverse`) have *no* Hocket
+  consumer — Hocket applies gain non-destructively via Firewheel's
   `Volume::Linear` at the node, not baked into the buffer — so promoting
   them would be extraction-ahead-of-need with no dedup. The WAV loader
   (`load_wav_to_buffer`) would drag `hound` into the deliberately
-  zero-dep `audio-primitives`, and Strophe has no file-import path yet
+  zero-dep `audio-primitives`, and Hocket has no file-import path yet
   (capture is mic-only). `SampleBank` is woodshed-shaped (keyed by
-  `Sound`/`SequencerPattern` ids; Strophe is content-addressed). Revisit
-  WAV when Strophe grows file import (around FT8).
+  `Sound`/`SequencerPattern` ids; Hocket is content-addressed). Revisit
+  WAV when Hocket grows file import (around FT8).
 
 ### Session 2026-05-19 — theme module (shared, via audio-widgets)
 
 - **Theme primitives promoted to the shared `audio-widgets` crate**,
-  not duplicated into a Strophe-local module. Mark's reminder ("we
+  not duplicated into a Hocket-local module. Mark's reminder ("we
   did an audio-widget shared crate with woodshed — a lot of the same
   work is in there") was the prompt; he confirmed the placement
   instinct ("good instinct! agreed!"). The spacing rhythm (`SP_*`,
   4px base), type scale (`TS_*`, ~1.2× modular), `mono_family()`, and
   a base `Palette` (surfaces / text hierarchy / Material-You triad /
-  success-danger) are byte-identical across Woodshed and Strophe, so
+  success-danger) are byte-identical across Woodshed and Hocket, so
   copying them would be genuine duplication. They now live in
-  `audio-widgets::theme` and re-export through `strophe_widgets::theme`.
+  `audio-widgets::theme` and re-export through `hocket_widgets::theme`.
 - **What stayed product-specific:** the waveform fill color (per
   `track.color`) and Woodshed's fretboard diagram colors are NOT in
   the shared palette — each host layers those on top and reads the
@@ -907,7 +907,7 @@ installers, Android via cargo-apk.
   Palette. Migrating Woodshed to compose the shared base is a later,
   optional cleanup — not forced by this pass.
 - **One new dep on `audio-widgets`:** `serde` (workspace), because
-  `ThemeMode` round-trips through a host's settings. Strophe has no
+  `ThemeMode` round-trips through a host's settings. Hocket has no
   settings persistence yet, so `Palette::dark()` is hardcoded at
   startup; a light toggle is a later settings pass (the app is already
   fully `palette`-driven).
@@ -922,16 +922,16 @@ installers, Android via cargo-apk.
 
 ### Session 2026-05-18 — scaffold
 
-- Per Mark's preference (confirmed 2026-05-18), Strophe lives in
-  its own repo `repos/strophe/` rather than as a crate inside the
+- Per Mark's preference (confirmed 2026-05-18), Hocket lives in
+  its own repo `repos/hocket/` rather than as a crate inside the
   Woodshed workspace.
-- Crate name on crates.io: `strophe` is squatted by a dead 2016
-  redirect (last release v0.1.1, "Moved to libstrophe-sys"). Workspace
-  uses `strophe-*` namespaced crates; the bare name is cosmetic since
+- Crate name on crates.io: `hocket` is squatted by a dead 2016
+  redirect (last release v0.1.1, "Moved to libhocket-sys"). Workspace
+  uses `hocket-*` namespaced crates; the bare name is cosmetic since
   distribution is through itch.io/Gumroad, not `cargo install`. If we
   later want the bare name we can file a crates.io abandonment claim.
-- Brand alignment: Strophe sits beside Mere under the Merely parent
-  brand. The Greek root στροφή/στρόφος ("turn") still names Strophe on
+- Brand alignment: Hocket sits beside Mere under the Merely parent
+  brand. The Greek root στροφή/στρόφος ("turn") still names Hocket on
   its own terms: the choral turn is the loop, the pass-the-session turn
   is the collaboration mechanic. It no longer echoes the parent, though.
   The umbrella was *Strophos* (same root) until 2026-07-09, when it
@@ -942,8 +942,8 @@ installers, Android via cargo-apk.
 
 ### Session 2026-05-18 — Feature Target 1 click engine
 
-- **Reuse strategy:** `strophe-engine` wraps `woodshed_audio::SequencerEngine`
-  with a strophe-shaped `Transport` API. The click sound
+- **Reuse strategy:** `hocket-engine` wraps `woodshed_audio::SequencerEngine`
+  with a hocket-shaped `Transport` API. The click sound
   (`Sound::Click`), sample-accurate scheduling, and tempo-change
   continuity are *all* reused from woodshed-audio's tested
   implementation. The wrap is thin (~190 LOC including tests and
@@ -971,7 +971,7 @@ installers, Android via cargo-apk.
 - **Audible-output validation is by ear.** Headless unit tests cover
   the `Transport` shape and the pattern construction; the cpal stream
   + the actual click sound require the maintainer to listen. The
-  demo binary (`cargo run -p strophe`) emits ~13 seconds of click
+  demo binary (`cargo run -p hocket`) emits ~13 seconds of click
   with one tempo change and one time-signature change.
 
 ### Session 2026-05-18 — FT5 WaveformWidget (framework spike) ✅
@@ -989,7 +989,7 @@ installers, Android via cargo-apk.
   `painter.stroke(&path, &Stroke::new(w), color).draw()`. No Widget
   trait to implement. (Same pattern woodshed-xilem uses for
   fretboard / chord-diagram canvases.)
-- **`strophe-widgets` API** (product-agnostic, extraction-ready for
+- **`hocket-widgets` API** (product-agnostic, extraction-ready for
   `audio-widgets`): `compute_peaks(&[f32], columns) -> Vec<(f32,f32)>`
   (single-LOD min/max peak file) + `waveform_view(peaks, wave_color,
   zero_line_color)` (filled envelope, faint zero-line). 4 unit tests
@@ -1044,7 +1044,7 @@ installers, Android via cargo-apk.
 
 ### Session 2026-05-18 — FT4.1 interactive record + tick refactor
 
-- **FT4.1 landed + validated.** `strophe` app has a ● Record button
+- **FT4.1 landed + validated.** `hocket` app has a ● Record button
   (arms a bar-aligned capture, 1-bar count-in, 1-bar capture), a live
   capture-phase line (ready → count-in → recording → captured), a
   loop-status line, and a ■ Stop loop button. UI Record button
@@ -1067,7 +1067,7 @@ installers, Android via cargo-apk.
 
 ### Session 2026-05-18 — FT4.0 app shell + crate rename
 
-- **FT4.0 landed.** `strophe` (the app crate) opens a Xilem + Masonry
+- **FT4.0 landed.** `hocket` (the app crate) opens a Xilem + Masonry
   window showing engine status + a live output meter. A `task_raw`
   background task drives `Engine::tick()` on a ~16 ms cadence — this
   is load-bearing (Firewheel needs `update()` regularly; it also
@@ -1075,11 +1075,11 @@ installers, Android via cargo-apk.
   Firewheel engine lives directly in `AppState`; Xilem keeps state on
   the main thread so that's fine (same pattern woodshed-xilem uses for
   its `!Send` SequencerEngine).
-- **Crate rename** (per Mark): the app is now the `strophe` binary
-  (was `strophe-xilem`), and the scripted audio demo is now
-  `strophe-headless` (was `strophe`). Directories + package names +
+- **Crate rename** (per Mark): the app is now the `hocket` binary
+  (was `hocket-xilem`), and the scripted audio demo is now
+  `hocket-headless` (was `hocket`). Directories + package names +
   bin names + workspace members all updated; README, CLAUDE.md, and
-  this plan's FT4 task updated. `strophe-xilem` is gone from
+  this plan's FT4 task updated. `hocket-xilem` is gone from
   `workspace.dependencies` (the app + headless binaries are leaf
   members, not dep targets).
 - No theme module yet — bare Masonry labels. Visual conventions
@@ -1199,8 +1199,8 @@ node already configured; no state machine transitions involved.
 uses `sync_volume_event` (which uses `ParamData::Volume`, not
 `Notify`, and works post-hoc).
 
-**Standardized Firewheel-usage rules for Strophe** (codify in a
-`strophe-engine` helper module after FT3b stabilizes):
+**Standardized Firewheel-usage rules for Hocket** (codify in a
+`hocket-engine` helper module after FT3b stabilizes):
 
 - Construct sampler nodes fully populated at `add_node` time. The
   initial state is what reliably reaches the audio thread.
@@ -1213,10 +1213,10 @@ uses `sync_volume_event` (which uses `ParamData::Volume`, not
   broken; if a manual event is unavoidable, construct it as
   `NodeEventType::Param { data: ParamData::any(Notify::new(value)), path }`.
 - Voice cap `VOICE_POOL_SIZE = 32` is a soft ceiling for runaway
-  hosts; Strophe's actual usage is bounded (Deeler maxes at 10
+  hosts; Hocket's actual usage is bounded (Deeler maxes at 10
   active voices, looper bounded by user-captured layer count).
 
-**API added** in `strophe-engine`:
+**API added** in `hocket-engine`:
 
 - `LayerKey { track_id: TrackId, layer_index: u16 }` — engine-side
   identifier for a model layer
@@ -1226,7 +1226,7 @@ uses `sync_volume_event` (which uses `ParamData::Volume`, not
 - `Engine::is_layer_assigned(key) -> bool`
 - `Engine::voice_count() -> usize`
 - `ModelTrackId` re-export so binaries can construct `LayerKey`
-  without a separate `strophe-model` dep
+  without a separate `hocket-model` dep
 - Old `play_replay` removed (subsumed by `play_layer`)
 
 **Engine has no opinion about `PlaybackMode`.** That's deliberate.
@@ -1278,7 +1278,7 @@ per-track `PlaybackMode` to support both profiles.
 
 **Refactor landed in this session:**
 
-- `strophe-model::track::PlaybackMode { Sum, SelectOne { active } }`,
+- `hocket-model::track::PlaybackMode { Sum, SelectOne { active } }`,
   per-track. Default `Sum` for looper-pedal profile, `SelectOne` for
   Deeler.
 - `Track::new_with_mode(...)` constructor; `Session::default_playback_mode`
@@ -1307,7 +1307,7 @@ per-track `PlaybackMode` to support both profiles.
   is the harder target, looper bounded by user's layer count.
 - FT6: renamed from "PhraseSlot interaction" to "Layer / slot
   interaction" — types updated.
-- FT7: reframed as Deeler-profile primary surface, not Strophe's
+- FT7: reframed as Deeler-profile primary surface, not Hocket's
   primary surface (looper's primary is the layer stack from FT4).
   Sections explicitly noted as a deliberate extension past Deeler,
   bounded by the strict-cap against arrange-view drift.
@@ -1332,21 +1332,21 @@ engine boundary. Recorded here:
   that was wrong; `firewheel-graph` at 0.10.2 as of 2026-03-17.
   Corrected throughout. Pin a crates.io version; only path-dep if
   unreleased fixes become necessary.
-- **strophe-model is the authority; Firewheel is the runtime.** This
+- **hocket-model is the authority; Firewheel is the runtime.** This
   was the key conceptual clarification — Firewheel's "app/game state
   sends events into the audio graph" model is much better-suited to
-  Strophe than a transport-dominant DAW engine. The audio graph plays
+  Hocket than a transport-dominant DAW engine. The audio graph plays
   the *projected state*; the canonical session lives in
-  `strophe-model`.
+  `hocket-model`.
 - **FT3b-prime inserted ahead of FT3b.** A focused proof: click +
   I/O + capture-into-MediaRef + replay-as-sample-resource + one meter.
-  After it works, retire the SequencerEngine wrap from Strophe core
+  After it works, retire the SequencerEngine wrap from Hocket core
   (Woodshed keeps its own SequencerEngine).
-- **No CLAP for Strophe v1.** Stronger than the prior framing: no
+- **No CLAP for Hocket v1.** Stronger than the prior framing: no
   plugin hosting at all in v1. First-party Rust devices on Firewheel
   nodes with schema-driven UI. CLAP isn't WASM-possible, drags
   DAW-shaped product gravity, and the firewheel-extra host is marked
-  TODO. See `memory/project_strophe_no_clap_doctrine.md`.
+  TODO. See `memory/project_hocket_no_clap_doctrine.md`.
 - **Web is gated, not free.** firewheel-web-audio needs wasm
   threading/atomics + nightly + build-std + COOP/COEP. Proof gate,
   not a "for free" capability. Flagged on FT11.
@@ -1357,7 +1357,7 @@ engine boundary. Recorded here:
     pattern (`fretboard_view` / `chord_diagram_view` as template for
     `WaveformWidget`), and Song Mode's bar-boundary/pending-change
     semantics (not the Song model itself).
-  - *Woodshed: do not take* as Strophe's core: `InputEngine`,
+  - *Woodshed: do not take* as Hocket's core: `InputEngine`,
     `SongEngine`, `Looper`. The Woodshed `Looper` is single-bar with
     overdub semantics — wrong shape for layered durable sample
     resources in a graph.
@@ -1368,7 +1368,7 @@ engine boundary. Recorded here:
     abstraction). `mere-masonry` as future embedding reference only
     (currently non-compiling).
   - *Mere: do not pull in* `mere-host-runtime`, host chrome, renderer
-    registry, or Moothold proper for Strophe v1. Moothold is mostly
+    registry, or Moothold proper for Hocket v1. Moothold is mostly
     placeholder/docs today.
   - *Graph viz for history DAG / merge / audio routing:* use
     `cartography` + `graph-canvas` from Mere, not the host chrome.
@@ -1416,12 +1416,12 @@ Captured here so the rationale survives the session:
   along with the DAW extension ladder, visual design conventions,
   and full crate stack.
 - **FT1 SequencerEngine wrap is now a labeled placeholder.** Code
-  comments in `strophe-engine/src/lib.rs` cite the FT3b swap to
+  comments in `hocket-engine/src/lib.rs` cite the FT3b swap to
   Firewheel. No code change today — swap happens when Firewheel's
   capabilities (variable-length loop playback, cpal input, WASM
   backend) actually need to come in.
 - **Outstanding for next session:** layered-model migration in
-  `strophe-model` (replaces PhraseSlot / variations_per_track /
+  `hocket-model` (replaces PhraseSlot / variations_per_track /
   Track.slots[A,B,C,D] with `Track.layers: Vec<Layer>`,
   `Edit::CapturePhrase` becomes `Edit::AppendLayer`, etc).
   Coordinated change — touches model + engine + integration tests
@@ -1438,7 +1438,7 @@ Captured here so the rationale survives the session:
 - Repo scaffold drafted.
 - Five-crate workspace created with stubs.
 - Initial plan committed (this doc).
-- `cargo build --workspace` green; `cargo run -p strophe` runs the
+- `cargo build --workspace` green; `cargo run -p hocket` runs the
   Feature Target 0 placeholder.
 - **PROJECT_DESCRIPTION pass by maintainer**: configurability framing
   (defaults not limits), "pass the mic around in a circle" north-star
@@ -1447,10 +1447,10 @@ Captured here so the rationale survives the session:
 - **Feature Targets 1 + 2 landed in a single session.** Workspace
   builds clean; 23 model tests + 2 engine tests pass.
 - **Feature Target 1 (click track engine) — landed.**
-  - `strophe-engine` implements `Transport` + `Engine` + `Handle`
+  - `hocket-engine` implements `Transport` + `Engine` + `Handle`
     wrapping `woodshed_audio::SequencerEngine`.
   - 2 unit tests pass (`transport_default`, `pattern round-trip`).
-  - `cargo run -p strophe` drives a scripted click demo:
+  - `cargo run -p hocket` drives a scripted click demo:
     4s at 120 BPM 4/4 → continuous tempo change to 90 BPM → 4s →
     pattern restart with time signature 7/8 → 4s → stop. Demo
     completes cleanly end-to-end.
@@ -1460,8 +1460,8 @@ Captured here so the rationale survives the session:
     note clicks."
   - **Outstanding for Mark**: CPU measurement during a long demo run
     (deferred to next session — not blocking Feature Target 2 work).
-- **Feature Target 2 (strophe-model) — landed.**
-  - Seven modules in `crates/strophe-model/src/`: `ids`, `phrase`,
+- **Feature Target 2 (hocket-model) — landed.**
+  - Seven modules in `crates/hocket-model/src/`: `ids`, `phrase`,
     `track`, `session`, `history`, `persistence`, `lib`. Each under
     300 LOC.
   - All four validation criteria pass (see Plan section above).
@@ -1485,7 +1485,7 @@ Captured here so the rationale survives the session:
     that the engine computes; the model just stores bytes.
   - **TimeSignature is defined locally**, mirroring
     `woodshed_audio::TimeSignature`'s shape. The engine converts at
-    the boundary. Keeps strophe-model framework-agnostic.
+    the boundary. Keeps hocket-model framework-agnostic.
   - **Configurability honored from day one**: `Vec<Track>` and
     `Vec<PhraseSlot>` with explicit `variations_per_track` /
     `bars_per_phrase` on `Session`, not const-generic arrays. Widening
@@ -1502,9 +1502,9 @@ Captured here so the rationale survives the session:
   Findings entry for full corrections + donor map. Key moves:
   Firewheel is on crates.io (prior claim was wrong); no CLAP for v1
   at all (stronger than prior framing); FT3b-prime inserted as the
-  focused Firewheel proof; strophe-model is the authority, Firewheel
+  focused Firewheel proof; hocket-model is the authority, Firewheel
   is the runtime.
-- **Layered-model migration in strophe-model — landed.**
+- **Layered-model migration in hocket-model — landed.**
   - `PhraseSlot` → `Layer { phrase_id, gain, muted }`; `Track.slots`
     → `Track.layers: Vec<Layer>`; `Session.variations_per_track`
     removed; track count default 10 → 4.
@@ -1526,8 +1526,8 @@ Captured here so the rationale survives the session:
     one sample-player + one meter); retire the SequencerEngine wrap.
 - **FT3b-prime, step 1 — Firewheel substrate alive.**
   - `firewheel = { version = "0.10", features = ["cpal", "symphonium"] }`
-    added to workspace; `woodshed-audio` dropped from strophe-engine.
-  - `strophe-engine/src/lib.rs` rewritten on `FirewheelContext`. The
+    added to workspace; `woodshed-audio` dropped from hocket-engine.
+  - `hocket-engine/src/lib.rs` rewritten on `FirewheelContext`. The
     `SequencerEngine` wrap is gone.
   - Minimal graph for the substrate proof: `graph_in → graph_out`
     mono-to-stereo passthrough.
@@ -1539,11 +1539,11 @@ Captured here so the rationale survives the session:
     those types removed with the SequencerEngine wrap).
   - **By-ear validation confirmed by maintainer 2026-05-18.**
     Mic-to-speakers passthrough audible through the Firewheel graph.
-    Firewheel is the right substrate for Strophe; the spine swap
+    Firewheel is the right substrate for Hocket; the spine swap
     holds.
 - **FT3b-prime, steps 2–5 — full graph implementation landed.**
   - Click sampler (`SamplerNode` + `RepeatMode::RepeatEndlessly`),
-    pre-rendered click loop in new `strophe-engine::click` module
+    pre-rendered click loop in new `hocket-engine::click` module
     (one bar at 120 BPM 4/4, accented downbeat, 50 ms decay envelope).
   - Capture tap via `StreamReaderNode` + `StreamReaderState`,
     exposed through `Engine::drain_input(&mut Vec<f32>) -> usize`.
@@ -1657,11 +1657,11 @@ Captured here so the rationale survives the session:
   (docs.rs type indexes lack method-level detail, so iteration is
   via cargo errors + reading firewheel-nodes source).
 - **Feature Target 3a (capture data plane) — landed.**
-  - Two new modules in `strophe-engine`: `media` (MediaStore trait +
+  - Two new modules in `hocket-engine`: `media` (MediaStore trait +
     BLAKE3 InMemoryStore, ~140 LOC incl. tests) and `capture` (Capture
     state machine, ~220 LOC incl. tests).
   - One new dep: `blake3` for content hashing. Engine-side only;
-    `strophe-model` is unchanged.
+    `hocket-model` is unchanged.
   - **FT3 split into 3a/3b/3c.** FT3 as originally written was too
     large for one session (capture + cpal input + bar-phase sync +
     latency calibration + playback). Splitting acknowledges that the
@@ -1680,5 +1680,5 @@ Captured here so the rationale survives the session:
     it — tests feed synthetic samples synchronously. The cross-thread
     integration (and the lock-free question) lands with FT3b's cpal
     input stream.
-  - All 17 strophe-engine tests pass (12 unit + 3 integration + 2
+  - All 17 hocket-engine tests pass (12 unit + 3 integration + 2
     transport carry-overs).

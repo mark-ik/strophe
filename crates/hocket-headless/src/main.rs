@@ -1,4 +1,4 @@
-//! Strophe — application binary.
+//! Hocket — application binary.
 //!
 //! Until Feature Target 4 (Xilem app shell) lands, this binary serves
 //! as a scripted demo of the Firewheel-backed audio engine. Run it
@@ -31,7 +31,7 @@ const CAPTURE_BARS: u8 = 1;
 const COUNT_IN_BARS: u8 = 1;
 
 fn main() {
-    println!("strophe — FT3b bar-aligned demo");
+    println!("hocket — FT3b bar-aligned demo");
     println!("turn your speakers down (feedback risk).");
     println!();
 

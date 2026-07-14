@@ -1,4 +1,4 @@
-//! The Strophe UI as genet views (2026-07-08 concept; S2: real data).
+//! The Hocket UI as genet views (2026-07-08 concept; S2: real data).
 //!
 //! One screen: the pass-the-mic circle | the loop table | the transport.
 //! Everything data-bearing derives from [`AppState`]'s `Session`; gestures
@@ -67,7 +67,7 @@ fn top(state: &AppState) -> Child {
                 el(
                     "span",
                     (
-                        el("span", text("strophe")),
+                        el("span", text("hocket")),
                         el("span", text(".")).attr("class", "brand-dot"),
                     ),
                 )

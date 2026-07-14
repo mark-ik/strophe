@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn worker_saves_then_opens_a_project() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("practice.strophe");
+        let path = dir.path().join("practice.hocket");
         let wake: Wake = Arc::new(|| {});
         let (worker, updates) = spawn_project_worker(wake);
         let bundle = ProjectBundle::new(Session::new_default(), History::new());

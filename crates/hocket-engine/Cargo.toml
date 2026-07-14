@@ -1,7 +1,7 @@
 [package]
 name = "hocket-engine"
 version = "0.1.0"
-description = "Audio engine for Strophe: transport, click track, loop scheduling, capture."
+description = "Audio engine for Hocket: transport, click track, loop scheduling, capture."
 edition.workspace = true
 license.workspace = true
 authors.workspace = true

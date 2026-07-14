@@ -1,6 +1,6 @@
-//! Strophe's genet desktop host (genet-host refactor).
+//! Hocket's genet desktop host (genet-host refactor).
 //!
-//! A winit window presenting the Strophe view tree: `GenetAppRunner` diffs
+//! A winit window presenting the Hocket view tree: `GenetAppRunner` diffs
 //! the views into a `ScriptedDom`, a retained `IncrementalLayout` lays it
 //! out, the paint list lowers to a `netrender::Scene`, and
 //! `genet-winit-host`'s `SurfaceHost` rasterizes and composites. The view
@@ -69,7 +69,7 @@ struct App {
     rendered: sprigging::RenderedLeaves,
     /// OS accessibility bridge: the same laid-out DOM the frame renders is
     /// projected to an AccessKit tree and pushed here, so a screen reader reads
-    /// Strophe's controls. `None` until the window exists.
+    /// Hocket's controls. `None` until the window exists.
     a11y: Option<AccessKitBridge>,
     /// Maps an actionable node's AccessKit id back to its DOM node, so a screen
     /// reader's `Click` routes to the same `dispatch_click` path a mouse takes.
@@ -205,7 +205,7 @@ impl App {
 
             // Accessibility: project the same laid-out DOM this frame rendered into
             // an AccessKit tree and push it to the OS bridge, rebuilding only when
-            // the DOM or size changed (or the adapter isn't installed yet). Strophe
+            // the DOM or size changed (or the adapter isn't installed yet). Hocket
             // is a single genet surface, so it skips nothing and salts nothing —
             // the engine's opaque ids are the AccessKit ids. `build_subtree` hands
             // back the actionable nodes; we remember them so a screen reader's
@@ -306,7 +306,7 @@ impl ApplicationHandler<HostEvent> for App {
             event_loop
                 .create_window(
                     Window::default_attributes()
-                        .with_title("Strophe")
+                        .with_title("Hocket")
                         // Top-anchored + short enough to clear the taskbar on a
                         // 720-logical laptop screen.
                         .with_position(winit::dpi::LogicalPosition::new(40.0, 8.0))

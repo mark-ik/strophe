@@ -1,4 +1,4 @@
-//! Strophe session data model.
+//! Hocket session data model.
 //!
 //! Framework-agnostic by design. The audio engine, the UI, and the
 //! sync layer all consume this crate as peers. No dependencies on

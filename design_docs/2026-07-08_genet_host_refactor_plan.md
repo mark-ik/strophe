@@ -1,10 +1,10 @@
-# Strophe onto the genet host + chisel leaves (Masonry retirement)
+# Hocket onto the genet host + chisel leaves (Masonry retirement)
 
-**Status (2026-07-08): LANDED.** Strophe's UI was rebuilt fresh on `xilem_serval`
+**Status (2026-07-08): LANDED.** Hocket's UI was rebuilt fresh on `xilem_serval`
 (genet's third `xilem_core` backend) — not a port of the Masonry surfaces but
 the new one-screen loop-recorder design — with the waveform + meter as `chisel`
-leaves and the `strophe_engine` audio spine wired in unchanged. The Masonry app
-and the `mark-ik/xilem` fork are deleted family-wide (strophe + woodshed). See
+leaves and the `hocket_engine` audio spine wired in unchanged. The Masonry app
+and the `mark-ik/xilem` fork are deleted family-wide (hocket + woodshed). See
 the Progress log for the slice-by-slice receipts; the design-forward track ran
 S0 (scaffold) → S1 (UI) → S2 (model) → S5 (chisel leaves) → engine → S6 (cut).
 
@@ -21,7 +21,7 @@ Woodshed already proved the exit: it migrated its whole app onto `xilem_serval`
 `woodshed/design_docs/2026-07-04_genet_host_cross_platform_plan.md`) and, at its
 own S5 cut, deleted its Masonry app. But woodshed could not drop the fork,
 because two Masonry-coupled shared crates live in its workspace and are still
-consumed by **Strophe**:
+consumed by **Hocket**:
 
 - `audio-widgets` (`../woodshed/crates/audio-widgets`) — `meter` / `fader` /
   `knob` (+ `waveform`), Masonry `Widget`s with `paint()`.
@@ -29,26 +29,26 @@ consumed by **Strophe**:
   combobox etc.
 
 Because both are woodshed **workspace members**, their `xilem = { workspace = true }`
-resolves against woodshed's `[workspace.dependencies]` even when Strophe builds
-them, so the fork cannot leave woodshed while Strophe needs them. **Strophe is
-the only live consumer.** Move Strophe off Masonry and both crates lose their
+resolves against woodshed's `[workspace.dependencies]` even when Hocket builds
+them, so the fork cannot leave woodshed while Hocket needs them. **Hocket is
+the only live consumer.** Move Hocket off Masonry and both crates lose their
 last consumer; then the fork retires from both workspaces. This plan is the
-family-wide fork retirement, expressed as a Strophe refactor.
+family-wide fork retirement, expressed as a Hocket refactor.
 
 ## What moves, and what does not
 
 **Moves (the UI layer only):**
 
-- `crates/strophe` (the Masonry app: `main.rs` + `view/{transport,tracks,combination,settings}.rs`).
-- `crates/strophe-widgets` (re-exports + the custom-paint widgets).
-- The theme (`strophe-widgets::theme`: `SP_*`, `TS_*`, `palette`, `mono_family`).
+- `crates/hocket` (the Masonry app: `main.rs` + `view/{transport,tracks,combination,settings}.rs`).
+- `crates/hocket-widgets` (re-exports + the custom-paint widgets).
+- The theme (`hocket-widgets::theme`: `SP_*`, `TS_*`, `palette`, `mono_family`).
 
 **Does not move (the whole audio spine + data):**
 
-- `crates/strophe-engine` — the Firewheel audio graph, capture, the realtime
+- `crates/hocket-engine` — the Firewheel audio graph, capture, the realtime
   thread. UI-agnostic.
-- `crates/strophe-model` — pure session/track/layer data.
-- `crates/strophe-headless` — the audio test-harness bin.
+- `crates/hocket-model` — pure session/track/layer data.
+- `crates/hocket-headless` — the audio test-harness bin.
 - `firewheel`, `cpal`, `rtrb`, `basedrop`, the sync/persistence layers.
 
 This split is the whole reason the refactor is tractable and low-risk: **none of
@@ -76,7 +76,7 @@ Read from the current app (2026-07-08):
   - `SelectOne` (Deeler): arm + a variation-slot button row (active slot marked).
 - **Combination**: the Deeler combination grid (tracks x variation slots).
 - **Settings**: session settings (profile, tempo).
-- **Custom-paint widgets** (`audio-widgets` + `strophe-widgets`): `waveform`,
+- **Custom-paint widgets** (`audio-widgets` + `hocket-widgets`): `waveform`,
   `meter`, `fader`, `knob` — Masonry `Widget` + Xilem `View` pairs. The `knob`,
   for example, paints kurbo arcs + a circle in `paint()`, drives value on
   vertical-drag `on_pointer_event`, sizes 48px in `measure`, announces
@@ -92,9 +92,9 @@ Read from the current app (2026-07-08):
 | `OneOf3` / `OneOf2` (surface / strip switch) | `match` -> boxed `AnyView` (as woodshed's tab/lens switch) |
 | combobox (`xilem-components`) | native `xilem-serval` `select` view (dissolves) |
 | `waveform_view` / `meter_view` / `fader` / `knob` | **`chisel` Path-A leaves** + `xilem-serval` view wrappers |
-| `strophe-widgets::theme` (`SP_*`, `palette`, `mono`) | tinct-derived CSS (as woodshed's `theme.rs`) |
+| `hocket-widgets::theme` (`SP_*`, `palette`, `mono`) | tinct-derived CSS (as woodshed's `theme.rs`) |
 | `AppState` + helper methods | **unchanged** (UI-agnostic; action closures call `st.method()`) |
-| `strophe-engine` / `strophe-model` / Firewheel | **unchanged** |
+| `hocket-engine` / `hocket-model` / Firewheel | **unchanged** |
 
 The custom-paint widgets are all Path-A (vector shapes the paint vocabulary can
 say: bars, arcs, poly-lines), so they stay resolution-independent and tile-cached
@@ -109,31 +109,31 @@ drag math -> `Leaf::event`, `Role::Slider` -> `Leaf::accessibility`.
 ## Target crate structure (mirroring woodshed)
 
 ```text
-strophe-model     (exists)  pure data + UI-agnostic AppState/helpers   [maybe lift AppState here]
-strophe-engine    (exists)  Firewheel graph, realtime thread           UNCHANGED
-strophe-headless  (exists)  audio test harness                          UNCHANGED
-strophe-views     (NEW)     genet views over AppState                 mirrors woodshed-views
-strophe-genet    (NEW)     genet winit host (SurfaceHost, redraw)     mirrors woodshed-genet
-strophe-widgets   (rewrite) chisel leaves (waveform/meter/fader/knob)  Masonry code deleted
-strophe           (app)     the old Masonry bin                         DELETED at the parity cut
+hocket-model     (exists)  pure data + UI-agnostic AppState/helpers   [maybe lift AppState here]
+hocket-engine    (exists)  Firewheel graph, realtime thread           UNCHANGED
+hocket-headless  (exists)  audio test harness                          UNCHANGED
+hocket-views     (NEW)     genet views over AppState                 mirrors woodshed-views
+hocket-genet    (NEW)     genet winit host (SurfaceHost, redraw)     mirrors woodshed-genet
+hocket-widgets   (rewrite) chisel leaves (waveform/meter/fader/knob)  Masonry code deleted
+hocket           (app)     the old Masonry bin                         DELETED at the parity cut
 ```
 
 Decisions / recommendations:
 
-- **The audio chisel leaves start Strophe-owned** (in `strophe-widgets`, rewritten
+- **The audio chisel leaves start Hocket-owned** (in `hocket-widgets`, rewritten
   on chisel). Woodshed-genet currently uses none of them (it themes via tinct and
   needs no meter/waveform), so there is no second consumer to design for. Extract
   to a shared `audio-chisel` crate only if one appears.
 - **`xilem-components` dissolves**, it does not port: its combobox is exactly what
   native `xilem-serval` `select` already provides (woodshed uses it).
-- **Two bins coexist during the migration** (`strophe` Masonry + `strophe-genet`),
+- **Two bins coexist during the migration** (`hocket` Masonry + `hocket-genet`),
   the same way woodshed ran `woodshed-xilem` alongside `woodshed-genet` until
   parity. Delete the Masonry bin only at the cut.
 - **Reuse woodshed's genet build setup verbatim**: the `[workspace.dependencies]`
   genet/netrender/tinct git deps, the `[patch.crates-io]` stylo mirror pointed at
   `mark-ik/stylo` (`mark-ik/servo-media-features`), and the gitignored
-  `.cargo/config.toml` local-genet `[patch]`. **Build strophe-genet from the
-  strophe cwd** so the local patch applies (see
+  `.cargo/config.toml` local-genet `[patch]`. **Build hocket-genet from the
+  hocket cwd** so the local patch applies (see
   `memory/reference_mere_cargo_cwd_local_genet` — this bit woodshed for ~75 min).
 
 ## Dependencies and gates
@@ -153,17 +153,17 @@ Decisions / recommendations:
 ## Plan (slices; keep an app runnable throughout)
 
 Organized by feature target + done-condition, not calendar. Each slice keeps
-either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
+either the Masonry `hocket` (until S6) or `hocket-genet` runnable.
 
-- **S0 - scaffold `strophe-genet`.** New winit + `SurfaceHost` bin (copy
+- **S0 - scaffold `hocket-genet`.** New winit + `SurfaceHost` bin (copy
   woodshed-genet's host skeleton: boot, rasterize, acquire, compose, present;
   incremental layout; key/pointer routing; optional CSD chrome). *Done:* a themed
-  placeholder genet window opens via `cargo run -p strophe-genet` from the
-  strophe cwd; `cargo run -p strophe` (Masonry) still works.
+  placeholder genet window opens via `cargo run -p hocket-genet` from the
+  hocket cwd; `cargo run -p hocket` (Masonry) still works.
 - **S1 - AppState reachable + tinct theme.** Confirm/lift `AppState` to a
-  UI-agnostic home (strophe-model or a new strophe-core) if it carries any Masonry
-  coupling (e.g. a peniko-typed `palette`). Port `strophe-widgets::theme` to tinct
-  seeds -> CSS. *Done:* strophe-genet renders the transport bar's static content
+  UI-agnostic home (hocket-model or a new hocket-core) if it carries any Masonry
+  coupling (e.g. a peniko-typed `palette`). Port `hocket-widgets::theme` to tinct
+  seeds -> CSS. *Done:* hocket-genet renders the transport bar's static content
   (title, status, nav) from `AppState`; clicking nav switches `state.surface`.
 - **S2 - Transport surface.** Full transport as native views: nav, the readout
   labels, and controls (`Record`/`Stop`/`Undo`/`Redo`) wired to `AppState`
@@ -181,31 +181,31 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
   swap out the placeholders. *Done:* real meters / waveforms / knobs render and
   interact (knob/fader drag) via chisel; a headed smoke shows them live and a
   `paint_dirty` test shows an unchanged leaf produces zero repaints.
-- **S6 - parity cut (fork retirement).** Delete the Masonry `strophe` bin and
-  `strophe-widgets`' Masonry code; drop `audio-widgets`, `xilem-components`, and
-  the `xilem`/`masonry`/`masonry_winit` deps from Strophe's `Cargo.toml`. With no
+- **S6 - parity cut (fork retirement).** Delete the Masonry `hocket` bin and
+  `hocket-widgets`' Masonry code; drop `audio-widgets`, `xilem-components`, and
+  the `xilem`/`masonry`/`masonry_winit` deps from Hocket's `Cargo.toml`. With no
   consumer left, retire `audio-widgets` + `xilem-components` in the woodshed repo
   and drop the fork from woodshed's `[workspace.dependencies]` too. *Done:*
-  `grep -ri masonry` is clean across the strophe + woodshed workspaces; both build
+  `grep -ri masonry` is clean across the hocket + woodshed workspaces; both build
   genet-only, single wgpu tree. **The `mark-ik/xilem` fork is retired.**
 
 ## Validation
 
 - The audio engine + model are untouched, so audio output is a fixed reference:
-  A/B the Masonry `strophe` and `strophe-genet` for identical audio behaviour at
+  A/B the Masonry `hocket` and `hocket-genet` for identical audio behaviour at
   each slice.
 - Each slice ends with a runnable app and (from S2) a driven receipt of the ported
   surface, the same headed-verify discipline woodshed used.
-- Build from the strophe cwd; keep the stylo mirror in sync with genet.
+- Build from the hocket cwd; keep the stylo mirror in sync with genet.
 
 ## Findings (verify during execution)
 
-- **`AppState` home + coupling.** It lives in the `strophe` app crate today
+- **`AppState` home + coupling.** It lives in the `hocket` app crate today
   (`crate::AppState`); its helpers look pure but `state.palette` may be a
   Masonry/peniko palette. Confirm and lift the UI-agnostic part to a core crate;
   re-derive `palette` from tinct.
 - **Widget inventory + homes.** `waveform_view` / `meter_view` are re-exported by
-  `strophe-widgets`; `meter` / `fader` / `knob` live in `audio-widgets`;
+  `hocket-widgets`; `meter` / `fader` / `knob` live in `audio-widgets`;
   `waveform` home to confirm. Enumerate the full custom-paint set before S5.
 - **chisel runner-wiring status.** The S5 gate; coordinate with the genet-side
   chisel work (its "Next" 1-2). Structure slices (S0-S4) run ahead of it.
@@ -213,23 +213,23 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
 
 ## Open questions
 
-1. Audio chisel leaves Strophe-owned (`strophe-widgets`) vs. a shared
-   `audio-chisel` crate. Recommend Strophe-owned first; extract on a second
+1. Audio chisel leaves Hocket-owned (`hocket-widgets`) vs. a shared
+   `audio-chisel` crate. Recommend Hocket-owned first; extract on a second
    consumer.
 2. Coexisting bins during migration acceptable (woodshed precedent says yes).
-3. CSD chrome (own title bar, as woodshed) vs. OS decorations for strophe-genet.
-4. Does any Strophe widget need Path B (a `vello::Scene` / shader) rather than
+3. CSD chrome (own title bar, as woodshed) vs. OS decorations for hocket-genet.
+4. Does any Hocket widget need Path B (a `vello::Scene` / shader) rather than
    Path A? Current set (bars, arcs, poly-lines) is all Path A.
 
 ## Progress
 
 - 2026-07-08: **S6 done — the `mark-ik/xilem` fork is retired family-wide.** With
   the genet app at parity (UI + audio), the Masonry stack is deleted:
-  - **strophe** (`ddf5d65`): rm `crates/strophe` (the Masonry bin) +
-    `crates/strophe-widgets`; drop `xilem` / `masonry` / `masonry_winit` +
+  - **hocket** (`ddf5d65`): rm `crates/hocket` (the Masonry bin) +
+    `crates/hocket-widgets`; drop `xilem` / `masonry` / `masonry_winit` +
     the cross-repo `audio-widgets` / `xilem-components` path-deps. Kept
-    `audio-primitives` (pure DSP, used by `strophe-engine`). Genet-only,
-    single wgpu 29 tree; a pre-existing `strophe-headless` `CapturePhase` match
+    `audio-primitives` (pure DSP, used by `hocket-engine`). Genet-only,
+    single wgpu 29 tree; a pre-existing `hocket-headless` `CapturePhase` match
     was fixed forward.
   - **woodshed** (`35ac0c0`): rm `crates/audio-widgets` + `crates/xilem-components`
     (the fork's last consumers) + drop the fork deps. woodshed builds genet-only.
@@ -237,9 +237,9 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
   workspaces build in one genet/wgpu-29 tree. **The plan's goal is met.**
   Deferred to a spin-out: the Deeler combination + settings surfaces,
   idle-tick throttling, and cross-platform validation (iMac / Fedora / Mint).
-- 2026-07-08: **Audio engine wired — strophe-genet makes sound (parity with the
+- 2026-07-08: **Audio engine wired — hocket-genet makes sound (parity with the
   Masonry app's core function).** `state.rs`'s `AppState` now owns a live
-  `strophe_engine::Engine` + `InMemoryStore`, mirroring the Masonry app's glue:
+  `hocket_engine::Engine` + `InMemoryStore`, mirroring the Masonry app's glue:
   `toggle_record` arms a bar-aligned (or free) capture, `tick()` advances the
   engine ~60fps and promotes a completed capture into a real `AppendLayer` +
   looping playback, and arm / mute / tempo / click drive the engine
@@ -255,7 +255,7 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
   capture → store → AppendLayer → playback chain. This clears the S6 blocker:
   retiring the Masonry app no longer loses audio. Follow-ups: real per-layer peak
   data into the waveform leaves (needs `compute_peaks` lifted out of the
-  Masonry-coupled `strophe-widgets`); input-monitor + count-in click polish;
+  Masonry-coupled `hocket-widgets`); input-monitor + count-in click polish;
   idle-tick throttling (currently a steady 60fps like the Masonry app).
 - 2026-07-08: **S5 done — the waveforms + meters are chisel leaves.** The signature
   visual (each track's summed loop) is now a chisel Path-A leaf — a filled,
@@ -273,12 +273,12 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
   boxes. Per-layer mini-rows stay CSS bars (tiny; not worth a leaf each).
   Verified headed: the filled envelopes render in owner colours; committing a
   take (Guitar 3→4 layers) re-seeded its envelope (repaint-on-content-change);
-  the meters render. **strophe is the second real chisel consumer** (after
+  the meters render. **hocket is the second real chisel consumer** (after
   meerkat's grid/arrangement), exercising the leaf on-screen path end to end.
   These waveform follow-ups landed 2026-07-11; see the newer progress entry.
 - 2026-07-11: **Real responsive waveforms + meter ballistics landed.** Shared
   `audio-primitives` now extracts signed min/max columns and advances
-  configurable meter attack/release/peak hold. `strophe-engine::waveform`
+  configurable meter attack/release/peak hold. `hocket-engine::waveform`
   projects real stored layers and summed track mixes through the same source
   selection/repeating-loop semantics as export. The Genet host caches by
   content identity/signature, uses stable track/phrase-derived leaf keys,
@@ -286,7 +286,7 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
   releases stale leaves, and feeds held peaks to Chisel meters. The old
   deterministic silhouettes and per-layer CSS bars are retired.
 - 2026-07-08: **S2 done — the UI runs on the real model.** `state.rs` introduces
-  `AppState`: a `strophe_model::Session` + its `History`; every data-bearing
+  `AppState`: a `hocket_model::Session` + its `History`; every data-bearing
   gesture commits a real `Edit` (`ArmTrack`, `AppendLayer`, `SetLayerMute`,
   `MuteTrack`, `SetBpm`, `SetMasterClock`), so undo/redo and the future sync
   layer see exactly what the UI did. The demo session is seeded through the same
@@ -298,7 +298,7 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
   in `state.rs` with graduation notes): the live-capture flag (stopping commits
   an `AppendLayer` with placeholder media until the engine slice), the audible
   click, and solo (no model backing yet). Rail peers stay placeholder until sync.
-  Verified by driving the running app (PostMessage to strophe's own hwnd —
+  Verified by driving the running app (PostMessage to hocket's own hwnd —
   targeted client-coordinate clicks, cannot touch other windows): record stop
   appended L4 to Guitar; tempo stepped 120→124; arming Bass mid-capture stopped
   and committed the Guitar take and moved the arm (teal border followed); a layer
@@ -342,11 +342,11 @@ either the Masonry `strophe` (until S6) or `strophe-genet` runnable.
     genet-layout paint fix later; the workaround is documented inline.
   - **Nested flex needs explicit `min-height: 0`** for the loop table to scroll
     internally instead of shoving the transport off-screen (`.body`/`.table`).
-- 2026-07-08: **S0 done — `strophe-genet` scaffolded and building.** New winit +
+- 2026-07-08: **S0 done — `hocket-genet` scaffolded and building.** New winit +
   `SurfaceHost` bin (retained `IncrementalLayout` redraw + click dispatch),
   rendering a themed placeholder with a working counter (render + hit-test +
-  dispatch + update + repaint proven). Built from the strophe cwd (9m cold,
-  genet stack); the Masonry `strophe` bin still checks green, now riding the
+  dispatch + update + repaint proven). Built from the hocket cwd (9m cold,
+  genet stack); the Masonry `hocket` bin still checks green, now riding the
   **git** xilem fork (`mark-ik/xilem@woodshed-theme`). Workspace wiring: genet /
   netrender / tinct git deps + a `[patch.crates-io]` stylo mirror to
   `mark-ik/stylo` (matching genet + woodshed). `.cargo/config.toml`
