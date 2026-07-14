@@ -13,8 +13,8 @@ accesskit = { workspace = true }
 strophe-model = { workspace = true }
 strophe-engine = { workspace = true }
 audio-primitives = { workspace = true }
-xilem-serval = { workspace = true }
-chisel = { workspace = true }
+cambium = { workspace = true }
+sprigging = { workspace = true }
 layout-dom-api = { workspace = true }
 genet-scripted-dom = { workspace = true }
 genet-layout = { workspace = true }

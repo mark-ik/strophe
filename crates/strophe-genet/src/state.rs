@@ -22,7 +22,7 @@ use strophe_engine::{
 use strophe_model::{
     Edit, History, Layer, MediaRef, Phrase, ProjectBundle, Session, Track, TrackColor, TrackId,
 };
-use xilem_serval::SelectState;
+use cambium::SelectState;
 
 use crate::identity::LocalIdentity;
 use crate::project_io::{ProjectCommand, ProjectUpdate};

@@ -7,7 +7,7 @@
 //! and meter drawing use host-owned chisel leaves.
 
 use strophe_model::{PhraseId, PlaybackMode, TrackColor, TrackId};
-use xilem_serval::{
+use cambium::{
     AnyView, SelectState, GenetCtx, GenetElement, clickable, el, lens, select, text,
 };
 

@@ -2,9 +2,9 @@
 //!
 //! The signature visual — each track's summed loop — is now a chisel Path-A
 //! leaf (a filled, mirrored amplitude envelope) rather than a row of CSS bars.
-//! The output meter is chisel's built-in [`chisel::Meter`]. The view places a
+//! The output meter is Sprigging's built-in [`sprigging::Meter`]. The view places a
 //! `<chisel-leaf key=…>` box; the host owns the leaves out of band in a
-//! [`chisel::LeafRegistry`] and reconciles them from [`AppState`] each frame,
+//! [`sprigging::LeafRegistry`] and reconciles them from [`AppState`] each frame,
 //! so genet stays a uniform-DOM engine and the widget content lives host-side.
 //!
 //! Keys derive from stable track/phrase identities inside disjoint waveform and
@@ -13,7 +13,7 @@
 use std::collections::{HashMap, HashSet};
 
 use audio_primitives::WaveformPeak;
-use chisel::{ColorF, Leaf, LeafRegistry, PaintCx, Path, RenderedLeaves, Size, SizeHint};
+use sprigging::{ColorF, Leaf, LeafRegistry, PaintCx, Path, RenderedLeaves, Size, SizeHint};
 use paint_list_api::PaintCmd;
 use genet_layout::LeafPaintSource;
 use strophe_model::{MediaRef, PhraseId, TrackColor, TrackId};
@@ -325,10 +325,10 @@ fn ensure_waveform(
 }
 
 fn ensure_meter(registry: &mut LeafRegistry<u64>, key: u64, level: f32, peak: f32) {
-    if let Some(m) = registry.get_mut_as::<chisel::Meter>(&key) {
+    if let Some(m) = registry.get_mut_as::<sprigging::Meter>(&key) {
         m.set_level(level, Some(peak));
     } else {
-        let mut m = chisel::Meter::new(
+        let mut m = sprigging::Meter::new(
             true,
             Size {
                 width: 10.0,

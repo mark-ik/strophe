@@ -33,7 +33,7 @@ use winit::application::ApplicationHandler;
 use winit::event::{ElementState, MouseButton, StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
-use xilem_serval::{PointerClick, Propagation, GenetAppRunner};
+use cambium::{GenetAppRunner, PointerClick, Propagation};
 
 use identity::LocalIdentity;
 use project_io::{ProjectCommand, ProjectUpdate, spawn_project_worker};
@@ -64,9 +64,9 @@ struct App {
     /// Host-owned chisel leaves (waveforms + meters), keyed by leaf key, plus
     /// their rendered Path-A command cache. Reconciled from `AppState` each
     /// frame; the retention gate keeps an unchanged leaf from repainting.
-    leaves: chisel::LeafRegistry<u64>,
+    leaves: sprigging::LeafRegistry<u64>,
     waveform_cache: leaves::WaveformCache,
-    rendered: chisel::RenderedLeaves,
+    rendered: sprigging::RenderedLeaves,
     /// OS accessibility bridge: the same laid-out DOM the frame renders is
     /// projected to an AccessKit tree and pushed here, so a screen reader reads
     /// Strophe's controls. `None` until the window exists.
@@ -173,12 +173,12 @@ impl App {
             // their Path-A commands at their boxes.
             leaves::reconcile(&mut self.leaves, &mut self.waveform_cache, runner.state());
             let boxes = layout.chisel_leaf_boxes();
-            let size_map: std::collections::HashMap<u64, chisel::Size> = boxes
+            let size_map: std::collections::HashMap<u64, sprigging::Size> = boxes
                 .iter()
                 .map(|(k, (w, h))| {
                     (
                         *k,
-                        chisel::Size {
+                        sprigging::Size {
                             width: *w,
                             height: *h,
                         },
@@ -460,9 +460,9 @@ fn main() {
         layout_size: (0.0, 0.0),
         sheet: theme::sheet(),
         cursor: (0.0, 0.0),
-        leaves: chisel::LeafRegistry::new(),
+        leaves: sprigging::LeafRegistry::new(),
         waveform_cache: leaves::WaveformCache::new(),
-        rendered: chisel::RenderedLeaves::new(),
+        rendered: sprigging::RenderedLeaves::new(),
         a11y: None,
         a11y_route: HashMap::new(),
         project_worker: Some(project_worker),

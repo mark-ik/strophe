@@ -65,8 +65,8 @@ winit = "0.30"
 # mirrors Woodshed's Genet section. Git deps on the owned repos; local
 # checkouts ride the gitignored .cargo/config.toml source-specific [patch].
 # Build strophe-genet from the strophe cwd so that patch applies.
-xilem-serval = { package = "cambium", git = "https://github.com/mark-ik/cambium.git", branch = "main" }
-chisel = { package = "sprigging", git = "https://github.com/mark-ik/cambium.git", branch = "main" }
+cambium = { git = "https://github.com/mark-ik/cambium.git", branch = "main" }
+sprigging = { git = "https://github.com/mark-ik/cambium.git", branch = "main" }
 layout-dom-api = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
 genet-scripted-dom = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
 genet-layout = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
