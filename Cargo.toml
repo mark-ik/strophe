@@ -61,12 +61,12 @@ firewheel = { version = "0.10", features = [
 
 winit = "0.30"
 
-# UI — genet host (2026-07-08 genet-host refactor). The new UI stack;
-# mirrors woodshed's genet section. GIT deps on the owned repos; local
+# UI — Genet host (2026-07-08 genet-host refactor). The new UI stack;
+# mirrors Woodshed's Genet section. Git deps on the owned repos; local
 # checkouts ride the gitignored .cargo/config.toml source-specific [patch].
 # Build strophe-genet from the strophe cwd so that patch applies.
-xilem-serval = { package = "serval-xilem", git = "https://github.com/mark-ik/genet.git", branch = "main" }
-chisel = { package = "serval-chisel", git = "https://github.com/mark-ik/genet.git", branch = "main" }
+xilem-serval = { package = "cambium", git = "https://github.com/mark-ik/cambium.git", branch = "main" }
+chisel = { package = "sprigging", git = "https://github.com/mark-ik/cambium.git", branch = "main" }
 layout-dom-api = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
 genet-scripted-dom = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
 genet-layout = { git = "https://github.com/mark-ik/genet.git", branch = "main" }
