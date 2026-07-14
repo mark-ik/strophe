@@ -27,6 +27,9 @@ winit = { workspace = true }
 muniment = { workspace = true, features = ["redb"] }
 armillary = { workspace = true }
 personae = { workspace = true }
+# Opaque round-trip of the sealed identity record when re-sealing it under the
+# post-rename record name (see identity.rs).
+serde_json = { workspace = true }
 pollster = "0.4"
 rfd = "0.17.2"
 

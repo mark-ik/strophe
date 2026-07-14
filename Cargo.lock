@@ -2617,6 +2617,7 @@ dependencies = [
  "personae",
  "pollster",
  "rfd",
+ "serde_json",
  "sprigging",
  "tempfile",
  "wgpu",

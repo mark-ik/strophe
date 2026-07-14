@@ -1,9 +1,9 @@
-//! Durable Strophe project storage over Muniment's host-supplied byte backend.
+//! Durable Hocket project storage over Muniment's host-supplied byte backend.
 //!
 //! The model's [`ProjectBundle`] is one mutable manifest. Captured media stays
-//! immutable and content-addressed under its existing [`MediaRef`]. Strophe
+//! immutable and content-addressed under its existing [`MediaRef`]. Hocket
 //! deliberately does not use Muniment's `BlobStore` here: `MediaRef` hashes the
-//! capture sample rate and samples together, which is Strophe's audio identity.
+//! capture sample rate and samples together, which is Hocket's audio identity.
 
 use std::collections::BTreeSet;
 
@@ -12,10 +12,12 @@ use hocket_model::{MediaRef, PersistenceError, ProjectBundle};
 
 use crate::media::{InMemoryStore, MediaBuffer, MediaStore, hash_buffer};
 
-/// The single mutable manifest key for one Strophe project backend.
-pub const MANIFEST_KEY: &str = "strophe/manifest";
-const MEDIA_PREFIX: &str = "strophe/media/";
-const MEDIA_MAGIC: &[u8; 8] = b"STPHMED\0";
+/// The single mutable manifest key for one Hocket project backend.
+pub const MANIFEST_KEY: &str = "hocket/manifest";
+const MEDIA_PREFIX: &str = "hocket/media/";
+// Renamed with the product (2026-07-14). Pre-rename bundles are not readable
+// and no legacy path is kept: no saved project predates the rename.
+const MEDIA_MAGIC: &[u8; 8] = b"HOCKMED\0";
 const MEDIA_VERSION: u16 = 1;
 const MEDIA_HEADER_LEN: usize = 8 + 2 + 4 + 8;
 

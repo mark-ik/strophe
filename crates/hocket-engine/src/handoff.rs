@@ -1,4 +1,4 @@
-//! Signed, transport-neutral Strophe session hand-off.
+//! Signed, transport-neutral Hocket session hand-off.
 //!
 //! A hand-off is a complete immutable snapshot: project manifest plus every
 //! referenced media buffer. The envelope addresses that snapshot to a recipient
@@ -7,7 +7,7 @@
 //! an eventual invite flow can carry its postcard bytes without changing the
 //! application protocol; confidentiality remains the carrier's responsibility.
 //!
-//! This module deliberately does not merge edits. `strophe-model::History`
+//! This module deliberately does not merge edits. `hocket-model::History`
 //! retains and integrates divergent branches, but it does not yet synthesize a
 //! reconciled head for conflicting concurrent edits.
 
@@ -340,7 +340,7 @@ impl ReceivedHandoff {
 }
 
 fn handoff_salt(session_id: SessionId) -> Vec<u8> {
-    let mut salt = b"strophe/handoff/v2/".to_vec();
+    let mut salt = b"hocket/handoff/v2/".to_vec();
     salt.extend_from_slice(session_id.0.as_bytes());
     salt
 }
