@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/strophe-engine",
     "crates/strophe-model",
@@ -14,7 +14,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 authors = ["Mark <sgt.mark3@gmail.com>"]
 repository = "https://github.com/mark-ik/strophe"
-rust-version = "1.92"
+rust-version = "1.96"
 
 [workspace.dependencies]
 # AccessKit tree/action types for the genet host's a11y bridge (must track
