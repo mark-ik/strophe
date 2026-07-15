@@ -122,14 +122,40 @@ FT9 wire protocol needs Moothold coordination. Still open for FT8: the media
 half (zip container of standard audio) and whatever Moothold-schema alignment
 FT9 needs.
 
+## Why not FLAC (decided against, 2026-07-15)
+
+The earlier follow-on list named FLAC as a size optimization. It does not fit
+this audio model. **FLAC is a lossless codec for *integer* PCM**; Hocket's audio
+identity is `f32` (`hash_buffer` hashes the raw little-endian float bytes). Two
+ways to force float into FLAC, both bad:
+
+- **Quantize `f32` -> integer.** Lossy: `f32` carries precision below any fixed
+  integer LSB, so the decoded samples differ and `hash_buffer(decoded)` no longer
+  equals the reference — content-addressing breaks.
+- **Reinterpret the `f32` bit pattern as `i32`.** Bit-exact, but a DAW opening
+  that FLAC reads the *integers*, i.e. noise, not the original audio — which
+  defeats the whole importability point of the doctrine.
+
+So FLAC can be lossless *or* importable for float audio, not both. It only
+becomes an option if the capture pipeline moves to integer PCM, which is an
+audio-model change, not a format tweak.
+
+The size intent was met differently: the archive is **Deflate-compressed**
+(miniz_oxide via the zip `deflate` feature). A probe on representative `f32`
+loop audio showed the real shape — dense audio compresses ~8% (high-entropy
+mantissa), but silence compresses ~99%, and loop phrases routinely have silent
+tails and sparse sections. An end-to-end save of a 1-second tone-then-silence
+phrase shrank its 192 KB WAV entry to 35 KB. WAV stays the on-extract format, so
+importability is untouched.
+
 ## What remains
 
-- **FLAC media** as a size optimization over WAV (needs an encoder dependency).
-- **`meta.json`** provenance entry, if useful.
 - **FT9 Moothold-schema alignment** for the hand-off wire protocol — separate
   from at-rest format; the CBOR manifest already shares Moothold's encoding.
 - Consider promoting the doctrine into `PROJECT_DESCRIPTION.md` at goal level
   (maintainer-owned; not edited here).
+- Genuinely-smaller-than-Deflate lossless audio would need a float-capable codec
+  (WavPack float mode) or an integer audio model; neither is on the near path.
 
 ## Progress
 
@@ -141,4 +167,12 @@ FT9 needs.
   `manifest.cbor` + `media/<hash>.wav`, over a new Muniment `ZipBackend` (seam
   kept, not dropped). WAV via `hound`; hash still over decoded samples. Verified
   openable by an independent zip reader. Engine + host + muniment suites green.
-  FT8's open-format goal is met; FLAC/`meta.json` are follow-on polish.
+- 2026-07-14: **Hardened after an adversarial multi-agent review** — ZipBackend
+  fsyncs temp+parent around the rename, put/delete roll back on write failure,
+  `scan` guards inverted ranges, content keys ending in `/` round-trip; Hocket
+  `save()` self-heals a corrupt/tampered `.wav` and prunes orphaned media;
+  `encode_media` guards the 4 GiB WAV limit. Cross-process locking documented as
+  a known single-writer limitation, not fixed.
+- 2026-07-15: **Polish LANDED** — `meta.json` provenance entry (human-readable,
+  informational) and Deflate compression on the archive. FLAC evaluated and
+  **rejected** for float audio (see above). FT8's open-format goal is met.

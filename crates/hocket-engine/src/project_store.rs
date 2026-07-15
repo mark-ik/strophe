@@ -24,6 +24,9 @@ use crate::media::{InMemoryStore, MediaBuffer, MediaStore, hash_buffer};
 pub const MANIFEST_KEY: &str = "manifest.cbor";
 /// Directory prefix for content-addressed media entries: `media/<hash>.wav`.
 const MEDIA_PREFIX: &str = "media/";
+/// Human-readable provenance entry, so someone who unzips a `.hock` sees what
+/// wrote it. Informational only: it is not read back on load.
+const META_KEY: &str = "meta.json";
 
 /// Project storage over a host-selected Muniment backend. A desktop host can
 /// use Redb; a browser host can later provide OPFS through the same interface.
@@ -175,6 +178,10 @@ impl<B: Backend> ProjectStore<B> {
         }
 
         writes.push(WriteOp::Put {
+            key: META_KEY.to_string(),
+            value: meta_json(),
+        });
+        writes.push(WriteOp::Put {
             key: MANIFEST_KEY.to_string(),
             value: bundle.to_bytes()?,
         });
@@ -224,6 +231,18 @@ fn referenced_media(bundle: &ProjectBundle) -> BTreeSet<MediaRef> {
         .values()
         .map(|phrase| phrase.media)
         .collect()
+}
+
+/// A small, human-readable provenance record for the archive. Hand-built (no
+/// serde dependency) since the shape is fixed; kept valid JSON so any tool reads
+/// it. `manifest_format` mirrors the CBOR manifest's schema version.
+fn meta_json() -> Vec<u8> {
+    format!(
+        "{{\n  \"format\": \"hocket-project\",\n  \"manifest_format\": {},\n  \"generator\": \"hocket-engine {}\"\n}}\n",
+        ProjectBundle::FORMAT_VERSION,
+        env!("CARGO_PKG_VERSION"),
+    )
+    .into_bytes()
 }
 
 fn media_key(reference: MediaRef) -> String {
@@ -368,20 +387,30 @@ mod tests {
 
             project.save(&bundle, &media).await.unwrap();
 
+            let reference = bundle.session.phrases.values().next().unwrap().media;
             let mut keys = backend.list("").await.unwrap();
             keys.sort();
-            assert_eq!(keys.len(), 2, "one manifest plus one media entry");
-            assert_eq!(keys[0], "manifest.cbor");
-            assert!(
-                keys[1].starts_with("media/") && keys[1].ends_with(".wav"),
-                "media entry should be media/<hash>.wav, got {}",
-                keys[1]
+            // manifest.cbor, media/<hash>.wav, meta.json
+            assert_eq!(
+                keys,
+                vec![
+                    "manifest.cbor".to_string(),
+                    media_key(reference),
+                    "meta.json".to_string(),
+                ]
             );
+            assert!(media_key(reference).starts_with("media/"));
+            assert!(media_key(reference).ends_with(".wav"));
 
             // The stored media entry is a real WAV a person could extract.
-            let wav = backend.get(&keys[1]).await.unwrap().unwrap();
+            let wav = backend.get(&media_key(reference)).await.unwrap().unwrap();
             assert_eq!(&wav[..4], b"RIFF");
             assert_eq!(&wav[8..12], b"WAVE");
+
+            // The provenance entry is human-readable JSON naming the format.
+            let meta = backend.get("meta.json").await.unwrap().unwrap();
+            let meta = String::from_utf8(meta).unwrap();
+            assert!(meta.contains("\"format\": \"hocket-project\""), "meta.json: {meta}");
         });
     }
 

@@ -54,10 +54,12 @@ before any other doc in this directory.
   responsive Chisel leaves, plus shared configurable meter ballistics.
 - [2026-07-14_open-project-format_plan.md](2026-07-14_open-project-format_plan.md)
   - **DOCTRINE + FULLY LANDED.** A `.hock` file must be openable and its material
-  importable without Hocket — no lock-in. Realized 2026-07-14: a `.hock` is a
-  zip of `manifest.cbor` (CBOR structure) + `media/<hash>.wav` (standard audio),
-  over a Muniment `ZipBackend` (the seam was kept, not dropped). Follow-on polish
-  only: FLAC media, a `meta.json` provenance entry.
+  importable without Hocket — no lock-in. A `.hock` is a Deflate-compressed zip
+  of `manifest.cbor` (CBOR structure) + `media/<hash>.wav` (standard audio) +
+  `meta.json` (provenance), over a Muniment `ZipBackend` (the seam was kept, not
+  dropped). Hardened after an adversarial review. FLAC was evaluated and rejected
+  (it cannot hold `f32` audio both losslessly and importably); Deflate is the
+  size win instead.
 
 ## Archive
 
