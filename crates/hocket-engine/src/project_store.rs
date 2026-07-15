@@ -108,10 +108,13 @@ impl<B: Backend> ProjectStore<B> {
         &self.backend
     }
 
-    /// Save newly referenced media blobs and the manifest in one backend batch.
-    /// Existing blobs are validated and reused. Transactional backends make new
-    /// blobs plus the manifest all-or-nothing. Simpler backends may leave only
-    /// harmless content-addressed blobs after an interrupted write.
+    /// Save every referenced media blob and the manifest in one backend batch.
+    /// An existing blob is reused only when it decodes to the exact referenced
+    /// audio; a missing, corrupt, or externally-edited blob is overwritten with
+    /// the known-good in-memory bytes rather than failing the save. Media no
+    /// longer referenced (e.g. saving a different project over the file) is
+    /// pruned, so discarded audio is not retained. Transactional backends make
+    /// the whole batch all-or-nothing.
     pub async fn save(
         &self,
         bundle: &ProjectBundle,
@@ -127,11 +130,17 @@ impl<B: Backend> ProjectStore<B> {
             return Err(ProjectStoreError::MissingMedia(missing));
         }
 
+        let wanted_keys: BTreeSet<String> =
+            references.iter().map(|reference| media_key(*reference)).collect();
+
         let mut writes = Vec::with_capacity(references.len() + 1);
-        for reference in references {
+        for reference in &references {
+            let reference = *reference;
             let buffer = media
                 .get(&reference)
                 .expect("missing references checked above");
+            // The in-memory store is keyed by content hash, so a mismatch here
+            // is an internal inconsistency, not recoverable user data.
             let actual = hash_buffer(&buffer.samples, buffer.sample_rate);
             if actual != reference {
                 return Err(ProjectStoreError::MediaHashMismatch {
@@ -140,22 +149,31 @@ impl<B: Backend> ProjectStore<B> {
                 });
             }
             let key = media_key(reference);
-            if let Some(existing) = self.backend.get(&key).await? {
-                let stored = decode_media(reference, &existing)?;
-                let actual = hash_buffer(&stored.samples, stored.sample_rate);
-                if actual != reference {
-                    return Err(ProjectStoreError::MediaHashMismatch {
-                        expected: reference,
-                        actual,
-                    });
-                }
-                continue;
+            // Reuse the stored blob only if it is present and decodes to exactly
+            // this audio. Otherwise overwrite it: we validated the in-memory
+            // bytes above, so a corrupt or tampered-with `.wav` self-heals on
+            // save instead of blocking every future save.
+            let reusable = match self.backend.get(&key).await? {
+                Some(existing) => decode_media(reference, &existing)
+                    .map(|stored| hash_buffer(&stored.samples, stored.sample_rate) == reference)
+                    .unwrap_or(false),
+                None => false,
+            };
+            if !reusable {
+                writes.push(WriteOp::Put {
+                    key,
+                    value: encode_media(buffer)?,
+                });
             }
-            writes.push(WriteOp::Put {
-                key,
-                value: encode_media(buffer)?,
-            });
         }
+
+        // Prune media entries the current project no longer references.
+        for existing_key in self.backend.list(MEDIA_PREFIX).await? {
+            if !wanted_keys.contains(&existing_key) {
+                writes.push(WriteOp::Delete { key: existing_key });
+            }
+        }
+
         writes.push(WriteOp::Put {
             key: MANIFEST_KEY.to_string(),
             value: bundle.to_bytes()?,
@@ -223,6 +241,16 @@ fn media_key(reference: MediaRef) -> String {
 /// ordinary WAV so a person can extract and import it without Hocket; identity
 /// still travels in the content-addressed file name, not the bytes.
 fn encode_media(buffer: &MediaBuffer) -> Result<Vec<u8>, ProjectStoreError> {
+    // A WAV data chunk length is a u32. A phrase whose float samples exceed ~4
+    // GiB would overflow hound's counter (panic in debug, silent truncation in
+    // release); refuse it cleanly. Unreachable for a loop recorder, but the
+    // encoder must not be an unbounded panic path.
+    let data_len = buffer.samples.len().checked_mul(4);
+    if data_len.is_none_or(|bytes| bytes > u32::MAX as usize - 64) {
+        return Err(ProjectStoreError::MediaEncode(
+            "phrase exceeds the 4 GiB WAV size limit".to_string(),
+        ));
+    }
     let spec = hound::WavSpec {
         channels: 1,
         sample_rate: buffer.sample_rate,
@@ -413,20 +441,64 @@ mod tests {
     }
 
     #[test]
-    fn save_rejects_a_corrupt_existing_media_blob() {
+    fn save_heals_a_corrupt_existing_media_blob() {
         block_on(async {
             let backend = MemoryBackend::new();
             let project = ProjectStore::new(backend.clone());
             let mut media = InMemoryStore::new();
             let bundle = bundle_with_one_layer(&mut media);
             let reference = bundle.session.phrases.values().next().unwrap().media;
+            // A corrupt/tampered existing blob for a still-good in-memory phrase.
             backend
                 .put(&media_key(reference), b"not audio")
                 .await
                 .unwrap();
 
-            let error = project.save(&bundle, &media).await.unwrap_err();
-            assert!(matches!(error, ProjectStoreError::InvalidMedia { .. }));
+            // Save must not abort: it overwrites the bad blob with valid audio.
+            project.save(&bundle, &media).await.unwrap();
+
+            // The project now reopens cleanly with the healed media.
+            let loaded = project.load().await.unwrap();
+            assert!(loaded.missing_media.is_empty());
+            assert_eq!(loaded.bundle, bundle);
+        });
+    }
+
+    #[test]
+    fn save_prunes_media_the_new_project_no_longer_references() {
+        block_on(async {
+            let backend = MemoryBackend::new();
+            let project = ProjectStore::new(backend.clone());
+
+            // Save project A, then a different project B over the same backend.
+            let mut media_a = InMemoryStore::new();
+            let bundle_a = bundle_with_one_layer(&mut media_a);
+            let reference_a = bundle_a.session.phrases.values().next().unwrap().media;
+            project.save(&bundle_a, &media_a).await.unwrap();
+
+            let mut media_b = InMemoryStore::new();
+            let mut session = Session::new_default();
+            let mut history = History::new();
+            let media = media_b.put(&[0.1, -0.2, 0.3], 44_100);
+            let phrase = Phrase::new(media, session.bars_per_phrase, session.bpm, 2);
+            let layer = Layer::new(phrase.id);
+            let track_id = session.tracks[0].id;
+            history.commit(
+                Edit::AppendLayer {
+                    track_id,
+                    phrase,
+                    layer,
+                },
+                &mut session,
+                2,
+            );
+            let bundle_b = ProjectBundle::new(session, history);
+            project.save(&bundle_b, &media_b).await.unwrap();
+
+            // Project A's media is gone, not retained as an orphan blob.
+            assert!(backend.get(&media_key(reference_a)).await.unwrap().is_none());
+            let media_keys = backend.list(MEDIA_PREFIX).await.unwrap();
+            assert_eq!(media_keys.len(), 1, "only project B's media remains");
         });
     }
 }

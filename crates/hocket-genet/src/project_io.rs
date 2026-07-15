@@ -1,8 +1,9 @@
 //! Background project save/open work for the Genet host.
 //!
 //! The host kernel keeps the live audio engine and session state. This actor
-//! receives cloned save snapshots or a project path, performs Redb I/O away from
-//! the kernel thread, then reports a typed result for the next frame to apply.
+//! receives cloned save snapshots or a project path, performs zip-archive
+//! project I/O away from the kernel thread, then reports a typed result for the
+//! next frame to apply.
 
 use std::path::PathBuf;
 use std::sync::mpsc::Receiver;
