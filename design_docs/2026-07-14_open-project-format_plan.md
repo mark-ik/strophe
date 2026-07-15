@@ -44,7 +44,7 @@ The genre-standard answer to "own extension, open guts" is a **zip archive with
 a custom extension** — the pattern behind Renoise `.xrns`, `.docx`, `.odt`,
 `.epub`, and Scratch `.sb3`. Applied here:
 
-```
+```text
 mysession.hock            (a zip)
   manifest.cbor           session + history, CBOR (already the FT8 target)
   media/<blake3>.wav      or .flac; ordinary audio files, content-addressed
@@ -72,6 +72,43 @@ and export becomes "copy the media out" rather than a converter.
   the file is a carrier.
 - **Compression vs. exactness.** FLAC is lossless and importable; prefer it over
   raw or lossy. WAV is the safe floor.
+
+## The CBOR half (structure serialization)
+
+The manifest (`ProjectBundle` = session + history) is serialized today with
+[postcard](../crates/hocket-model/src/persistence.rs). Postcard is compact but
+Rust-only and *not self-describing*: you cannot decode a postcard blob without
+the exact Rust types. That is itself a lock-in property, which is why the
+already-planned move to CBOR (ciborium) serves this doctrine, not just Moothold
+alignment.
+
+Why CBOR specifically:
+
+- **Self-describing and standard.** CBOR (RFC 8949) is an IETF standard with
+  implementations in every language; a `.hock` manifest becomes inspectable by
+  any CBOR tool, no Hocket required.
+- **One format across storage and sync.** Moothold speaks CBOR (blobs,
+  IndexCommits). If the at-rest manifest is already CBOR, the FT9 hand-off can
+  put the same bytes on the wire with no transcode step.
+
+The move is small because everything is serde-derive: swap
+`postcard::to_allocvec` / `from_bytes` for ciborium's writer/reader calls and
+the `PersistenceError` inner type. Two things are *not* mechanical and must be
+handled:
+
+- **Deterministic encoding is a hard requirement, not a nicety.** The bundle is
+  meant to be content-addressable, so equal state must encode to equal bytes.
+  Postcard gets this free from the `BTreeMap` collections. CBOR does *not* by
+  default — it needs RFC 8949 §4.2 core-deterministic rules (sorted keys,
+  shortest-form integers, definite lengths). Verify ciborium emits canonical
+  CBOR, or add a canonicalization step, before relying on hashed bundles.
+- **Encoding discriminator.** `format_version` is the first field but you cannot
+  read it without already knowing the encoding. A clean CBOR-only cut sidesteps
+  this; a read-both transition would need an out-of-band magic byte.
+
+Because no `.hock` file exists on disk, FT8 can make a **clean break** to
+CBOR-only with no read-both shim (DOC_POLICY section 3). Bump `FORMAT_VERSION`
+and stop reading postcard.
 
 ## Sequencing
 
