@@ -60,14 +60,13 @@ before any other doc in this directory.
   dropped). Hardened after an adversarial review. FLAC was evaluated and rejected
   (it cannot hold `f32` audio both losslessly and importably); Deflate is the
   size win instead.
-- [2026-07-15_wavpack_codec_plan.md](2026-07-15_wavpack_codec_plan.md)
-  - **PLANNING, not started.** Founding plan for a standalone pure-Rust WavPack
-  encoder/decoder crate (own repo, MIT/Apache), spun out of the open-format plan's
-  deferred FLAC/WavPack item. WavPack stores `f32` losslessly and DAWs read it, so
-  it is the codec FLAC could not be. Scope reframed by research: float is its own
-  milestone (not a small flag), encoder byte-identity is a non-goal (fixed decorr
-  config, reference-decodable gate), verified against the C reference as an oracle
-  the way retinue was. Awaiting a build decision.
+- **WavPack codec plan — MIGRATED to the founded crate.** The pure-Rust WavPack
+  codec was endorsed and founded 2026-07-15 as **wavicle**
+  (github.com/mark-ik/wavicle; crates.io 0.0.1 name claim published). Its plan
+  now lives in that repo's `design_docs/`; the pre-founding copy is archived at
+  [archive_docs/2026-07-15/](archive_docs/2026-07-15/2026-07-15_wavpack_codec_plan.md).
+  Hocket's side of the work is M6 there: swap `project_store` media from `.wav`
+  to `.wv` once the codec's float gate is oracle-clean.
 
 ## Archive
 
