@@ -176,3 +176,17 @@ importability is untouched.
 - 2026-07-15: **Polish LANDED** — `meta.json` provenance entry (human-readable,
   informational) and Deflate compression on the archive. FLAC evaluated and
   **rejected** for float audio (see above). FT8's open-format goal is met.
+- 2026-07-18: **Media is now lossless WavPack (`.wv`), not WAV.** The
+  "genuinely-smaller lossless audio needs a float-capable codec" note above (the
+  WavPack line) was carried through: a pure-Rust WavPack codec, **wavicle**
+  (`repos/wavicle`), was built for exactly this, and `project_store` now encodes
+  media with `wavicle::encode_float` and decodes with `wavicle::decode_stream`.
+  `MediaRef` is unchanged (BLAKE3 over the decoded f32 samples), and wavicle
+  verifies its block CRCs internally. Doctrine check: WavPack is an open format
+  real DAWs and `wvunpack` read, and wavicle is pure Rust and wasm-capable, so
+  "openable/importable without Hocket" still holds while media now compresses
+  losslessly (dense audio, which Deflate could not shrink). WAV survives only as
+  the offline mix-export format. One consequence to note: the archive's Deflate
+  now does little for the `.wv` media (already compressed) and mostly helps
+  `manifest.cbor`; making the `ZipBackend` store already-compressed entries
+  uncompressed is an optional future tidy, not a correctness issue.

@@ -41,6 +41,11 @@ armillary = { path = "../armillary", version = "0.1.0" }
 # Identity root for signed, recipient-bound hand-off envelopes. This is a
 # host-agnostic protocol dependency, not project/session state.
 personae = { path = "../personae", version = "0.1.0" }
+# Pure-Rust WavPack codec (repos/wavicle). Stores .hock media as lossless,
+# importable, wasm-capable .wv instead of WAV. `encode` is on because Hocket
+# both writes and reads media; MediaRef identity stays Hocket's BLAKE3 over the
+# decoded f32 samples, unchanged by the codec swap.
+wavicle = { path = "../wavicle", version = "0.0.1", features = ["encode"] }
 
 # Firewheel: modular audio graph engine, the spine of hocket-engine
 # (FT3b-prime). cpal feature enables the default native backend; the

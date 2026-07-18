@@ -2,18 +2,18 @@
 //!
 //! With a [`ZipBackend`](muniment::ZipBackend) the keys here become the entry
 //! names of a plain zip archive, so a saved `.hock` file opens in any unzip
-//! tool: the manifest is `manifest.cbor` and each captured phrase is an ordinary
-//! `media/<hash>.wav`. That openable, importable layout is the no-lock-in
-//! project-format doctrine made concrete; the store itself is backend-agnostic.
+//! tool: the manifest is `manifest.cbor` and each captured phrase is a lossless
+//! WavPack `media/<hash>.wv` (via wavicle). WavPack is an open format real DAWs
+//! read, so the layout stays importable without Hocket while compressing far
+//! better than WAV; the store itself is backend-agnostic.
 //!
 //! The model's [`ProjectBundle`] is one mutable manifest. Captured media stays
 //! immutable and content-addressed under its existing [`MediaRef`], which hashes
-//! the capture sample rate and decoded samples together — the WAV file is just a
-//! carrier, so the reference is verified against the *decoded* audio on load,
+//! the capture sample rate and decoded samples together — the `.wv` file is just
+//! a carrier, so the reference is verified against the *decoded* audio on load,
 //! not the file bytes.
 
 use std::collections::BTreeSet;
-use std::io::Cursor;
 
 use muniment::{Backend, StoreError, WriteOp};
 use hocket_model::{MediaRef, PersistenceError, ProjectBundle};
@@ -22,7 +22,7 @@ use crate::media::{InMemoryStore, MediaBuffer, MediaStore, hash_buffer};
 
 /// The manifest entry name for one Hocket project archive.
 pub const MANIFEST_KEY: &str = "manifest.cbor";
-/// Directory prefix for content-addressed media entries: `media/<hash>.wav`.
+/// Directory prefix for content-addressed media entries: `media/<hash>.wv`.
 const MEDIA_PREFIX: &str = "media/";
 /// Human-readable provenance entry, so someone who unzips a `.hock` sees what
 /// wrote it. Informational only: it is not read back on load.
@@ -154,7 +154,7 @@ impl<B: Backend> ProjectStore<B> {
             let key = media_key(reference);
             // Reuse the stored blob only if it is present and decodes to exactly
             // this audio. Otherwise overwrite it: we validated the in-memory
-            // bytes above, so a corrupt or tampered-with `.wav` self-heals on
+            // bytes above, so a corrupt or tampered-with `.wv` self-heals on
             // save instead of blocking every future save.
             let reusable = match self.backend.get(&key).await? {
                 Some(existing) => decode_media(reference, &existing)
@@ -252,77 +252,43 @@ fn media_key(reference: MediaRef) -> String {
         use std::fmt::Write as _;
         write!(&mut key, "{byte:02x}").expect("writing to a string cannot fail");
     }
-    key.push_str(".wav");
+    key.push_str(".wv");
     key
 }
 
-/// Encode one mono phrase as a 32-bit float WAV. The audio is stored as an
-/// ordinary WAV so a person can extract and import it without Hocket; identity
-/// still travels in the content-addressed file name, not the bytes.
+/// Encode one mono f32 phrase as lossless WavPack (`.wv`) via wavicle. WavPack
+/// is an open format real DAWs read, so a `.hock` stays importable without
+/// Hocket, and wavicle is pure Rust so this also works on the wasm host.
+/// Handles any length and capture rate (no WAV 4 GiB or rate-table limit).
+/// Identity still travels in the content-addressed file name, not the bytes.
 fn encode_media(buffer: &MediaBuffer) -> Result<Vec<u8>, ProjectStoreError> {
-    // A WAV data chunk length is a u32. A phrase whose float samples exceed ~4
-    // GiB would overflow hound's counter (panic in debug, silent truncation in
-    // release); refuse it cleanly. Unreachable for a loop recorder, but the
-    // encoder must not be an unbounded panic path.
-    let data_len = buffer.samples.len().checked_mul(4);
-    if data_len.is_none_or(|bytes| bytes > u32::MAX as usize - 64) {
-        return Err(ProjectStoreError::MediaEncode(
-            "phrase exceeds the 4 GiB WAV size limit".to_string(),
-        ));
-    }
-    let spec = hound::WavSpec {
-        channels: 1,
-        sample_rate: buffer.sample_rate,
-        bits_per_sample: 32,
-        sample_format: hound::SampleFormat::Float,
-    };
-    let mut cursor = Cursor::new(Vec::new());
-    let mut writer = hound::WavWriter::new(&mut cursor, spec)
-        .map_err(|error| ProjectStoreError::MediaEncode(error.to_string()))?;
-    for sample in &buffer.samples {
-        writer
-            .write_sample(*sample)
-            .map_err(|error| ProjectStoreError::MediaEncode(error.to_string()))?;
-    }
-    writer
-        .finalize()
-        .map_err(|error| ProjectStoreError::MediaEncode(error.to_string()))?;
-    Ok(cursor.into_inner())
+    wavicle::encode_float(1, buffer.sample_rate, &buffer.samples)
+        .map_err(|error| ProjectStoreError::MediaEncode(error.to_string()))
 }
 
-/// Decode a stored WAV phrase back to samples. The caller re-hashes the result
-/// against its [`MediaRef`], so a codec or corruption mismatch is caught there.
+/// Decode a stored `.wv` phrase back to samples. The caller re-hashes the
+/// result against its [`MediaRef`], so a codec or corruption mismatch is caught
+/// there. wavicle enforces the block CRCs internally as hard errors.
 fn decode_media(reference: MediaRef, bytes: &[u8]) -> Result<MediaBuffer, ProjectStoreError> {
-    let mut reader = hound::WavReader::new(Cursor::new(bytes)).map_err(|_| {
-        ProjectStoreError::InvalidMedia {
-            reference,
-            reason: "unreadable WAV",
-        }
+    let decoded = wavicle::decode_stream(bytes).map_err(|_| ProjectStoreError::InvalidMedia {
+        reference,
+        reason: "unreadable WavPack",
     })?;
-    let spec = reader.spec();
-    if spec.channels != 1 {
+    if decoded.channels != 1 || !decoded.is_float {
         return Err(ProjectStoreError::InvalidMedia {
             reference,
-            reason: "expected mono audio",
+            reason: "expected mono 32-bit float media",
         });
     }
-    if spec.sample_format != hound::SampleFormat::Float || spec.bits_per_sample != 32 {
-        return Err(ProjectStoreError::InvalidMedia {
-            reference,
-            reason: "expected 32-bit float samples",
-        });
-    }
-    let sample_rate = spec.sample_rate;
-    let samples = reader
-        .samples::<f32>()
-        .collect::<Result<Vec<f32>, _>>()
-        .map_err(|_| ProjectStoreError::InvalidMedia {
-            reference,
-            reason: "corrupt sample data",
-        })?;
+    // wavicle returns float samples as their IEEE bit patterns in `i32`.
+    let samples = decoded
+        .samples
+        .iter()
+        .map(|&s| f32::from_bits(s as u32))
+        .collect();
     Ok(MediaBuffer {
         samples,
-        sample_rate,
+        sample_rate: decoded.sample_rate,
     })
 }
 
@@ -390,7 +356,7 @@ mod tests {
             let reference = bundle.session.phrases.values().next().unwrap().media;
             let mut keys = backend.list("").await.unwrap();
             keys.sort();
-            // manifest.cbor, media/<hash>.wav, meta.json
+            // manifest.cbor, media/<hash>.wv, meta.json
             assert_eq!(
                 keys,
                 vec![
@@ -400,12 +366,12 @@ mod tests {
                 ]
             );
             assert!(media_key(reference).starts_with("media/"));
-            assert!(media_key(reference).ends_with(".wav"));
+            assert!(media_key(reference).ends_with(".wv"));
 
-            // The stored media entry is a real WAV a person could extract.
-            let wav = backend.get(&media_key(reference)).await.unwrap().unwrap();
-            assert_eq!(&wav[..4], b"RIFF");
-            assert_eq!(&wav[8..12], b"WAVE");
+            // The stored media entry is a real WavPack file (wvpk magic) that a
+            // DAW or wvunpack can open.
+            let wv = backend.get(&media_key(reference)).await.unwrap().unwrap();
+            assert_eq!(&wv[..4], b"wvpk");
 
             // The provenance entry is human-readable JSON naming the format.
             let meta = backend.get("meta.json").await.unwrap().unwrap();

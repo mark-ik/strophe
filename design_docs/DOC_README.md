@@ -54,19 +54,20 @@ before any other doc in this directory.
   responsive Chisel leaves, plus shared configurable meter ballistics.
 - [2026-07-14_open-project-format_plan.md](2026-07-14_open-project-format_plan.md)
   - **DOCTRINE + FULLY LANDED.** A `.hock` file must be openable and its material
-  importable without Hocket — no lock-in. A `.hock` is a Deflate-compressed zip
-  of `manifest.cbor` (CBOR structure) + `media/<hash>.wav` (standard audio) +
+  importable without Hocket — no lock-in. A `.hock` is a zip of `manifest.cbor`
+  (CBOR structure) + `media/<hash>.wv` (lossless WavPack via wavicle) +
   `meta.json` (provenance), over a Muniment `ZipBackend` (the seam was kept, not
   dropped). Hardened after an adversarial review. FLAC was evaluated and rejected
-  (it cannot hold `f32` audio both losslessly and importably); Deflate is the
-  size win instead.
-- **WavPack codec plan — MIGRATED to the founded crate.** The pure-Rust WavPack
-  codec was endorsed and founded 2026-07-15 as **wavicle**
-  (github.com/mark-ik/wavicle; crates.io 0.0.1 name claim published). Its plan
-  now lives in that repo's `design_docs/`; the pre-founding copy is archived at
+  (it cannot hold `f32` audio both losslessly and importably); WavPack can, and a
+  pure-Rust codec for it (wavicle) was built to do it.
+- **WavPack codec — founded as wavicle, wired into Hocket.** The pure-Rust
+  WavPack codec was founded 2026-07-15 as **wavicle**
+  (github.com/mark-ik/wavicle). Its plan lives in that repo's `design_docs/`; the
+  pre-founding copy is archived at
   [archive_docs/2026-07-15/](archive_docs/2026-07-15/2026-07-15_wavpack_codec_plan.md).
-  Hocket's side of the work is M6 there: swap `project_store` media from `.wav`
-  to `.wv` once the codec's float gate is oracle-clean.
+  M6 landed 2026-07-18: `project_store` media is now `.wv` via
+  `wavicle::encode_float`/`decode_stream`, with `MediaRef` still BLAKE3 over the
+  decoded f32 samples. WAV is retained only for the offline mix export.
 
 ## Archive
 

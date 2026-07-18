@@ -2603,6 +2603,7 @@ dependencies = [
  "pollster",
  "serde",
  "tempfile",
+ "wavicle",
 ]
 
 [[package]]
@@ -6251,6 +6252,10 @@ checksum = "dc1b4cb0cc549fcf58d7dfc081778139b3d283a081644e833e84682ad71cea24"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "wavicle"
+version = "0.0.1"
 
 [[package]]
 name = "wayland-backend"

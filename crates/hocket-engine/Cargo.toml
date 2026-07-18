@@ -17,6 +17,8 @@ audio-primitives = { workspace = true }
 firewheel = { workspace = true }
 blake3 = { workspace = true }
 muniment = { workspace = true }
+wavicle = { workspace = true }
+# WAV is retained for the offline mix export, not for stored media (now .wv).
 hound = { workspace = true }
 personae = { workspace = true }
 serde = { workspace = true }
