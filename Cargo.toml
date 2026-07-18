@@ -45,7 +45,7 @@ personae = { path = "../personae", version = "0.1.0" }
 # importable, wasm-capable .wv instead of WAV. `encode` is on because Hocket
 # both writes and reads media; MediaRef identity stays Hocket's BLAKE3 over the
 # decoded f32 samples, unchanged by the codec swap.
-wavicle = { path = "../wavicle", version = "0.0.1", features = ["encode"] }
+wavicle = { path = "../wavicle", version = "0.1.0", features = ["encode"] }
 
 # Firewheel: modular audio graph engine, the spine of hocket-engine
 # (FT3b-prime). cpal feature enables the default native backend; the
