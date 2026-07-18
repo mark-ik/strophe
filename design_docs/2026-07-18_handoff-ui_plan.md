@@ -51,7 +51,11 @@ state, and wires gestures. `hocket-genet` stays thin.
   `receive(own_master_public_key)`. Verification and media materialization run
   entirely in the worker; it returns an owned `ReceivedHandoff`. The private
   identity never leaves the main thread.
-- The file is a transfer artifact, not an archive. Once accepted, the session
+- The file is named `.hocket`, a single pass of the mic (the hocket technique
+  is splitting a line between voices, which is the gesture). A `.hocket` is a
+  transfer artifact, not an archive, and not structurally a `.hock`: a `.hock`
+  is a zip container, while a `.hocket` is signed, addressed CBOR envelope
+  bytes. The kinship of the two names is thematic. Once accepted, the session
   persists as an ordinary `.hock`.
 
 ### Recipient exchange: a contact token, replies auto-address
@@ -122,15 +126,20 @@ Organized by feature target and validation, not by time.
    - Done: the reply path needs no pasted token and is addressed to the original
      sender key.
 
-## Open decisions (for Mark)
+## Decisions (2026-07-18)
 
-- **Hand-off file name and extension.** Proposal: `.hockpass`, a "pass."
-- **Contact token encoding.** Proposal: hex now, a checksummed friendly encoding
-  later.
-- **Review surface shape.** Proposal: a card in the circle for a single
-  incoming; an overlay only if a queue ever appears.
-- **Saved contacts.** Proposal: remember the last sender in this cut; a full
-  address book later.
+- **Hand-off file name.** `.hocket`, a single pass of the mic. Thematic kin to
+  `.hock`, not structurally an instance of it (see the carrier section).
+- **Contact token encoding.** Hex now. A checksummed, friendlier encoding is a
+  follow-on.
+- **Review surface shape.** A card in the circle for a single incoming. An
+  overlay only if a queue ever appears.
+- **Saved contacts.** Remember the last sender in this cut, which the reply
+  auto-address design already provides. No address-book capability exists to
+  reuse: personae is identity primitives only, and the `mere-roster` crate is a
+  graph-object inspector panel, unrelated and mere-coupled. A portable contacts
+  capability, if wanted, is a separate plan and likely belongs near personae or
+  moot, since mere and isometry would share it. It is out of scope here.
 
 ## Findings
 
@@ -141,10 +150,17 @@ Organized by feature target and validation, not by time.
   auto-addressable, which softens the one-time key-exchange friction.
 - The rail already carries an identity line and a `handoff-note`, so the contact
   token and the incoming card have a home without a layout change.
+- No address-book capability exists in personae, hocket, or a shared crate. The
+  `mere-roster` hit from a contacts search is a graph-object inspector panel,
+  not a peer book. Remember-last-sender is therefore the honest MVP, and it is
+  free from the reply auto-address path.
 
 ## Progress
 
 - 2026-07-18: Scoped. Read the envelope engine, host identity, `AppState`,
   `view.rs`, the project worker, and the personae key API. Plan drafted against
-  the current code, not doc-to-doc. Nothing implemented yet; awaiting a go on
-  the naming and encoding decisions above.
+  the current code, not doc-to-doc. Nothing implemented yet.
+- 2026-07-18: Decisions settled with Mark. File is `.hocket`; token is hex;
+  review is a card in the circle; contacts is remember-last-sender, with a
+  portable address book left as a separate future plan after confirming no
+  existing capability could be reused.
