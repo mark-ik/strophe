@@ -45,7 +45,14 @@ before any other doc in this directory.
   with durable-sender attestation; raw bytes are not encrypted.
   durable Windows host identity and engine branch acceptance are landed.
   Recipient exchange, carrier, review UI, user-facing acceptance, and branch
-  merge remain separate work.
+  merge remain separate work. Host-side gaps are carried forward in the
+  hand-off UI plan below.
+- [2026-07-18_handoff-ui_plan.md](2026-07-18_handoff-ui_plan.md)
+  - **SCOPED.** The host-facing pass-the-mic gesture: a file carrier over the
+  existing project worker, a copyable contact token with auto-addressed replies,
+  incoming staging and review in the circle, and same-session or new-session
+  acceptance. Cleartext carrier, stated honestly; encryption and a network
+  carrier are later.
 - [2026-07-10_history-branches_plan.md](2026-07-10_history-branches_plan.md)
   - **LANDED.** Retained history branches, cross-branch checkout, and validated
   same-root graph integration; conflicting-edit reconciliation remains open.

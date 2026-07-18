@@ -1,0 +1,150 @@
+# Hand-Off UI Plan (host carrier, review, acceptance)
+
+Follow-on to [2026-07-10_signed-handoff-envelope_plan.md](2026-07-10_signed-handoff-envelope_plan.md).
+That plan landed the signed envelope protocol and left four host-side gaps in
+its Progress log: recipient key exchange, a carrier, incoming staging and
+review, and the user-facing acceptance action. This plan closes them.
+
+## Goal
+
+Make the pass-the-mic gesture usable from the Genet host. A musician can send a
+session to a peer and accept one that arrives, over a file carrier, without
+overstating confidentiality or pretending divergent edits are merged.
+
+## Context (what already exists)
+
+- **Engine.** `hocket-engine::handoff` builds and verifies the signed envelope:
+  `HandoffEnvelope::{create, to_bytes, from_bytes, receive}` and
+  `ReceivedHandoff::accept_branch`. Covered by focused tests. `receive` takes
+  the recipient's public key by value and needs no private key, so it can run
+  off the main thread.
+- **Identity.** `hocket-genet::identity::LocalIdentity` (a personae sealed
+  record, DPAPI-backed on Windows) implements `IdentityProvider`, exposing
+  `master_public_key()` and a short six-byte `fingerprint()`.
+- **Host.** `AppState` owns session, history, media store, the identity result,
+  and an Armillary project worker that does zip I/O off the kernel thread
+  (`project_io.rs`) with a typed command and update applied on the next frame.
+  The circle rail (`view.rs::rail`) is the pass-the-mic surface. It shows the
+  local performer and an identity line today; its comment already reserves the
+  space for peers.
+- **Personae keys.** `Ed25519PublicKey` has `to_bytes -> [u8; 32]` and
+  `from_bytes(&[u8; 32])`. There is no string codec, so the contact token
+  encoding is the host's responsibility.
+
+## Design
+
+Boundary rule from the repo guide: collaboration semantics stay in
+`hocket-engine` (they already do). The host carries bytes, holds presentation
+state, and wires gestures. `hocket-genet` stays thin.
+
+### Carrier: a file, over the existing project worker
+
+- Extend `ProjectCommand` with `WriteHandoff` and `ReadHandoff`, and
+  `ProjectUpdate` with `HandoffWritten` and `HandoffReceived`, reusing the
+  `Failed` variant. This reuses the actor and wake plumbing rather than spawning
+  a second worker.
+- **Send.** The main thread builds the envelope with `create()` (which needs the
+  private identity), then hands the owned `HandoffEnvelope` to the worker. The
+  worker serializes it (`to_bytes`, the heavy CBOR pass over the media) and
+  writes the file.
+- **Receive.** The worker reads the file, calls `from_bytes`, then
+  `receive(own_master_public_key)`. Verification and media materialization run
+  entirely in the worker; it returns an owned `ReceivedHandoff`. The private
+  identity never leaves the main thread.
+- The file is a transfer artifact, not an archive. Once accepted, the session
+  persists as an ordinary `.hock`.
+
+### Recipient exchange: a contact token, replies auto-address
+
+- Encode the 32-byte master public key as a copyable contact token. Lowercase
+  hex for this cut, which adds no dependency. A checksummed, friendlier encoding
+  is a follow-on.
+- Show the token near the identity line in the rail, with a copy affordance.
+- Sending needs the recipient's token. Two ways to supply it: paste one, or pick
+  the sender of a staged or last-received hand-off. A reply therefore needs no
+  paste, which keeps hands on the instrument after the first exchange.
+- Parse with `Ed25519PublicKey::from_bytes`. A malformed token is refused before
+  the worker runs.
+
+### Staging and review: never clobber silently
+
+- `AppState` gains `incoming: Option<ReceivedHandoff>`, host-local presentation
+  state. A received hand-off stages here and does not touch the live session
+  until accepted.
+- A review surface (a card in the circle) shows the sender fingerprint, whether
+  the hand-off continues the current session (same `session.id`) or opens a new
+  one, the track, layer, and phrase counts, and how many media blobs are new.
+  Its actions are Accept and Discard.
+
+### Acceptance: same-session branch or new session
+
+- **Same `session.id`.** Build a `ProjectBundle` from the live session and
+  history, call `ReceivedHandoff::accept_branch`, and on success write session,
+  history, and store back, then resync tempo and reconcile playback. This
+  mirrors the `Opened` path. The engine retains the prior local branch.
+- **Different `session.id`.** Adopt wholesale: stop playback, then replace
+  session, history, and store, mirroring `apply_project_update(Opened)`.
+- Either way: remember the sender for a one-tap reply, mark the project dirty
+  against `saved_head`, clear `incoming`, and set an honest status line.
+
+### Honesty (real feedback, not placebo)
+
+- Addressing is not encryption. The file carrier is cleartext. A private session
+  over a raw file needs an encryption policy first. State that at the point of
+  send; do not imply confidentiality.
+- The rail reflects real state only: the local identity, an incoming sender, and
+  an outgoing "handed to" note. It does not fabricate a live peer roster, which
+  belongs to the later sync layer.
+
+## Tasks and done-conditions
+
+Organized by feature target and validation, not by time.
+
+1. **Carrier round-trip.** Worker write and read commands land.
+   - Done: a `hocket-genet` test writes a self-addressed envelope to a temp
+     file and reads it back to an equal `ReceivedHandoff`. A wrong-recipient
+     file surfaces an error rather than panicking.
+2. **Contact token and recipient entry.** Own token renders and copies; a pasted
+   token parses or is refused.
+   - Done: token encode and parse round-trip in a unit test; malformed input
+     yields a refused-send status.
+3. **Send gesture.** "Hand off" builds, writes, and reports status; recording
+   blocks it, as saving does.
+   - Done: a headed check writes a file; status shows the written path and the
+     cleartext caveat.
+4. **Receive, review, accept.** "Receive hand-off" stages; the card shows the
+   facts; Accept applies (branch or adopt); Discard clears.
+   - Done: a same-session accept integrates and checks out the incoming head; a
+     new-session accept adopts; both reconcile playback; a headed check confirms
+     audio follows the accepted head.
+5. **Reply auto-address.** After accepting, or while staged, a reply
+   pre-addresses to the sender.
+   - Done: the reply path needs no pasted token and is addressed to the original
+     sender key.
+
+## Open decisions (for Mark)
+
+- **Hand-off file name and extension.** Proposal: `.hockpass`, a "pass."
+- **Contact token encoding.** Proposal: hex now, a checksummed friendly encoding
+  later.
+- **Review surface shape.** Proposal: a card in the circle for a single
+  incoming; an overlay only if a queue ever appears.
+- **Saved contacts.** Proposal: remember the last sender in this cut; a full
+  address book later.
+
+## Findings
+
+- `receive()` needs only the recipient public key, so verification and
+  materialization run entirely in the worker while the private identity stays on
+  the main thread.
+- `ReceivedHandoff.sender` is the durable sender identity, so replies are
+  auto-addressable, which softens the one-time key-exchange friction.
+- The rail already carries an identity line and a `handoff-note`, so the contact
+  token and the incoming card have a home without a layout change.
+
+## Progress
+
+- 2026-07-18: Scoped. Read the envelope engine, host identity, `AppState`,
+  `view.rs`, the project worker, and the personae key API. Plan drafted against
+  the current code, not doc-to-doc. Nothing implemented yet; awaiting a go on
+  the naming and encoding decisions above.

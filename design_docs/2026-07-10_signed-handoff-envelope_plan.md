@@ -57,3 +57,6 @@ have already been reconciled.
   master-signed `personae::DerivedKeyAttestation`, so receipt identifies the
   durable sender that authorized the session key. Recipient binding is now
   described accurately as addressing; confidentiality belongs to the carrier.
+- 2026-07-18: The remaining host-side work (recipient exchange, carrier, review
+  UI, acceptance action) is carried forward into
+  [2026-07-18_handoff-ui_plan.md](2026-07-18_handoff-ui_plan.md).
