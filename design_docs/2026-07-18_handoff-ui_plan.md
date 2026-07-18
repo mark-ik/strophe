@@ -179,3 +179,15 @@ Organized by feature target and validation, not by time.
   contact-identity brief, contacts key-rooted). Hocket's token is already the
   root key, so the MVP needs no resolver, and a shared contacts capability would
   live on the persona tier if built.
+- 2026-07-18: **Task 1 landed (carrier round-trip).** `ProjectCommand` gained
+  `WriteHandoff`/`ReadHandoff` and `ProjectUpdate` gained
+  `HandoffWritten`/`HandoffReceived`, served by the existing project worker: the
+  main thread builds and signs the envelope, the worker serializes and writes it,
+  and receive (file read, `from_bytes`, `receive`) runs entirely in the worker on
+  the recipient public key alone. Two `hocket-genet` tests pass: a self-addressed
+  envelope writes and reads back to an equal `ReceivedHandoff`, and a
+  wrong-recipient file surfaces a `Failed` update without a panic. `AppState`
+  shows honest placeholder status (handed off `<file>`, hand-off received from
+  `<fingerprint>`); the send and receive gestures that construct the commands are
+  tasks 3 and 4, so those two command variants carry a scoped `dead_code` allow
+  until then. Full `hocket-genet` suite green (13 tests).

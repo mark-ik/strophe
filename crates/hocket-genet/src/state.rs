@@ -45,6 +45,8 @@ enum ProjectStatus {
     Exporting,
     Saved,
     Exported(PathBuf),
+    HandedOff(PathBuf),
+    HandoffReceived(String),
     Error(String),
 }
 
@@ -187,6 +189,11 @@ impl AppState {
                 "exported {}",
                 path.file_name().unwrap_or_default().to_string_lossy()
             ),
+            ProjectStatus::HandedOff(path) => format!(
+                "handed off {}",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ),
+            ProjectStatus::HandoffReceived(sender) => format!("hand-off received from {sender}"),
             ProjectStatus::Error(message) => format!("project error: {message}"),
             ProjectStatus::Idle => {
                 if self.is_dirty() {
@@ -344,6 +351,24 @@ impl AppState {
             }
             ProjectUpdate::Exported { path } => {
                 self.project_status = ProjectStatus::Exported(path);
+            }
+            ProjectUpdate::HandoffWritten { path } => {
+                self.project_status = ProjectStatus::HandedOff(path);
+            }
+            ProjectUpdate::HandoffReceived { received } => {
+                // The carrier lands here. Staging, the review card, and
+                // acceptance are task 4 of the hand-off UI plan; no UI issues
+                // ReadHandoff yet, so this arm is not reached at runtime until
+                // that work wires the receive gesture. For now, surface the
+                // sender honestly.
+                let sender: String = received
+                    .sender
+                    .to_bytes()
+                    .iter()
+                    .take(6)
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect();
+                self.project_status = ProjectStatus::HandoffReceived(sender);
             }
             ProjectUpdate::Failed { action, message } => {
                 self.project_status = ProjectStatus::Error(format!("{action}: {message}"));
