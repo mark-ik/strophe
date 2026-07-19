@@ -189,6 +189,16 @@ Organized by feature target and validation, not by time.
   hocket-genet may call arboard for text directly (copy token, paste recipient)
   and migrate onto the shared service at its P0/P1. arboard is MIT/Apache and
   already in the family (genet), so this extends a blessed dependency.
+- 2026-07-18: **Headed receipt via the genet-probe harness.** hocket-genet
+  adopted genet-probe (Automatable + Driveable) and a merecat-style self-drive
+  scenario lane (`HOCKET_SCENARIO`, self-capture to PNG, `RESULT ok|fail`
+  receipt, exits without saving). `scenarios/handoff_circle.scn` asserts the
+  collaboration controls (Copy token, Paste recipient, Receive) are present in
+  the circle and captures the frame; a green Windows run confirms the UI. This
+  is hocket's first automatability consumer, reusable for future scenario tests.
+  Follow-on: the circle's controls reuse `project-command` styling and want a
+  visual pass; clicking gestures (Hand off / Receive / Paste recipient) are not
+  scenario-driven yet because they open file dialogs or write the clipboard.
 - 2026-07-18: **Tasks 3, 4, and 5 landed (send, receive, reply).** Send: paste a
   peer's contact token from the clipboard to set the recipient
   (`parse_contact_token`), then Hand off writes a signed `.hocket` via the save
