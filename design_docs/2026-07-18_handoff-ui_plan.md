@@ -189,6 +189,18 @@ Organized by feature target and validation, not by time.
   hocket-genet may call arboard for text directly (copy token, paste recipient)
   and migrate onto the shared service at its P0/P1. arboard is MIT/Apache and
   already in the family (genet), so this extends a blessed dependency.
+- 2026-07-18: **Tasks 3, 4, and 5 landed (send, receive, reply).** Send: paste a
+  peer's contact token from the clipboard to set the recipient
+  (`parse_contact_token`), then Hand off writes a signed `.hocket` via the save
+  dialog. Receive: open a `.hocket`, the worker authenticates it off-thread and
+  stages a `ReceivedHandoff`, a review card in the circle shows sender,
+  continues-this-session vs new, and counts, with Accept and Discard. Accept
+  integrates the branch (same session) or adopts wholesale (new), reconciles
+  playback, and addresses the reply back to the sender (task 5, folded in). Both
+  `dead_code` allows from the task-1 carrier are gone now that the gestures
+  construct the commands. The whole loop is wired; `cargo test -p hocket-genet`
+  green (14), clippy clean. Visual polish of the circle's collaboration controls
+  (currently reusing `project-command` styling) is a follow-on.
 - 2026-07-18: **Task 1 landed (carrier round-trip).** `ProjectCommand` gained
   `WriteHandoff`/`ReadHandoff` and `ProjectUpdate` gained
   `HandoffWritten`/`HandoffReceived`, served by the existing project worker: the
