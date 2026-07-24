@@ -36,11 +36,11 @@ audio-primitives = { git = "https://github.com/mark-ik/woodshed.git", branch = "
 
 # Portable durable-byte seam shared with Woodshed and Isometry. Hocket keeps
 # its own model and MediaRef identity; muniment owns backend mechanics.
-muniment = { path = "../eidetic/crates/muniment", version = "0.1.0", default-features = false }
-armillary = { path = "../armillary", version = "0.1.0" }
+muniment = { git = "https://github.com/mark-ik/mere.git", branch = "main", version = "0.1.0", default-features = false }
+armillary = { git = "https://github.com/mark-ik/mere.git", branch = "main", version = "0.1.0" }
 # Identity root for signed, recipient-bound hand-off envelopes. This is a
 # host-agnostic protocol dependency, not project/session state.
-personae = { path = "../personae", version = "0.1.0" }
+personae = { git = "https://github.com/mark-ik/mere.git", branch = "main", version = "0.1.0" }
 # Pure-Rust WavPack codec (repos/wavicle). Stores .hock media as lossless,
 # importable, wasm-capable .wv instead of WAV. `encode` is on because Hocket
 # both writes and reads media; MediaRef identity stays Hocket's BLAKE3 over the
